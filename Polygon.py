@@ -3,144 +3,139 @@ import matplotlib.pyplot as plt
 import numpy as np
 from io import BytesIO
 
-TOLERANCE = 1e-2  # סף קטן של 0.01°
+TOLERANCE = 1e-6
+
 
 def compute_internal_angle(p_prev, p_curr, p_next):
     """
     מחשבת את הזווית הפנימית (במעלות) בנקודה p_curr,
-    הנתונה שלוש נקודות עוקבות במצולע.
+    על סמך שלוש נקודות עוקבות במצולע.
     """
     v1 = np.array(p_prev) - np.array(p_curr)
     v2 = np.array(p_next) - np.array(p_curr)
-
-    v1 /= np.linalg.norm(v1)
-    v2 /= np.linalg.norm(v2)
-
-    cos_theta = np.clip(np.dot(v1, v2), -1.0, 1.0)
-    angle_rad = np.arccos(cos_theta)
-    angle_deg = np.degrees(angle_rad)
-    return round(angle_deg, 1)
+    # חישוב cos והמרה למעלות
+    cos_theta = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+    cos_theta = np.clip(cos_theta, -1.0, 1.0)
+    angle = np.degrees(np.arccos(cos_theta))
+    return round(angle, 1)
 
 
 def draw_polygon(sides, lengths, custom_angles=None):
-    total_angle_sum = 180 * (sides - 2)
-
-    # 1. הכנת רשימת הזוויות (מותאמות או שוות)
+    """
+    בונה ומשרטט מצולע לפי מספר צלעות, אורכים וזוויות פנימיות.
+    מחזיר את הפיגורמה של matplotlib, רשימת אורכי הצלעות (כולל תיקונים)
+    והודעת תיקון אם בוצע.
+    """
+    # 1. חישוב זוויות פנימיות תקניות
+    total_int_sum = 180 * (sides - 2)
     if custom_angles is not None:
-        angles_list = custom_angles.copy()
-        sum_angles = sum(angles_list)
-        if abs(sum_angles - total_angle_sum) > TOLERANCE:
-            factor = total_angle_sum / sum_angles
-            angles_list = [a * factor for a in angles_list]
-            correction_message = (
-                f"בוצע תיקון קל לזוויות כדי לסגור מצולע "
-                f"({sum_angles:.2f}° → {total_angle_sum:.2f}°)"
-            )
+        int_angles = custom_angles.copy()
+        sum_int = sum(int_angles)
+        if abs(sum_int - total_int_sum) > TOLERANCE:
+            factor = total_int_sum / sum_int
+            int_angles = [a * factor for a in int_angles]
+            correction = f"זוויות מותאמות: {sum_int:.1f}° → {total_int_sum:.1f}°"
         else:
-            correction_message = None
+            correction = None
     else:
-        angle_value = total_angle_sum / sides
-        angles_list = [angle_value] * sides
-        correction_message = None
+        val = total_int_sum / sides
+        int_angles = [val] * sides
+        correction = None
 
-    # 2. בניית הווקטורים ושערוך צלע חסרה במידת הצורך
-    angle_heading = 0.0
-    points = [(0.0, 0.0)]
+    # 2. חשב זוויות חיצוניות וכיווני ״צביעה״
+    ext_angles = [180 - a for a in int_angles]
+    headings = [sum(ext_angles[:i]) for i in range(sides)]
+
+    # 3. בנה וקטורים של צלעות (עד לתיקון חסר)
     vectors = []
-
-    for i in range(sides):
-        L = lengths[i]
-        # אם אורך צלע חסר, נדלג על הוספת נקודה ונרשום None בווקטורים
+    missing_idx = None
+    for i, L in enumerate(lengths):
+        theta = np.radians(headings[i])
         if L is None:
             vectors.append(None)
-            angle_heading += 180 - angles_list[i]
-            continue
+            missing_idx = i
+        else:
+            dx = L * np.cos(theta)
+            dy = L * np.sin(theta)
+            vectors.append((dx, dy))
 
-        dx = L * np.cos(np.radians(angle_heading))
-        dy = L * np.sin(np.radians(angle_heading))
-        vectors.append((dx, dy))
-        points.append((points[-1][0] + dx, points[-1][1] + dy))
-        angle_heading += 180 - angles_list[i]
-
-    # חשב צלע חסרה אם הייתה כזו
-    if None in lengths:
-        idx = lengths.index(None)
-        end_pt = points[-1]
-        missing_len = np.hypot(-end_pt[0], -end_pt[1])
-        lengths[idx] = missing_len
-        correction_message = (
-            f"בוצע חישוב לצלע החסרה (צלע {idx + 1}): {missing_len:.2f}"
-        )
+    # 4. טיפול בצלע חסרה או בסגירת המצולע
+    if missing_idx is not None:
+        # חישוב אורך חסר מהוקטורים הידועים
+        sum_dx = sum(v[0] for v in vectors if v is not None)
+        sum_dy = sum(v[1] for v in vectors if v is not None)
+        missing_len = np.hypot(-sum_dx, -sum_dy)
+        lengths[missing_idx] = missing_len
+        theta = np.radians(headings[missing_idx])
+        vectors[missing_idx] = (missing_len * np.cos(theta), missing_len * np.sin(theta))
+        correction = f"חישוב צלע חסרה #{missing_idx+1}: {missing_len:.2f}"
     else:
-        # בדוק סגירות מצולע ותיקן אם יש סטיה
-        total_dx = sum(v[0] for v in vectors if v is not None)
-        total_dy = sum(v[1] for v in vectors if v is not None)
-        shift = np.hypot(total_dx, total_dy)
-        if shift > TOLERANCE:
-            # נוסיף את התיקון לצלע הארוכה ביותר
-            corr_vec_len = shift
-            long_idx = int(np.argmax(lengths))
-            old = lengths[long_idx]
-            lengths[long_idx] += corr_vec_len
-            correction_message = (
-                f"בוצע תיקון קל בצלע {long_idx + 1} כדי לסגור את המצולע "
-                f"({old:.2f} → {lengths[long_idx]:.2f})"
-            )
+        sum_dx = sum(v[0] for v in vectors)
+        sum_dy = sum(v[1] for v in vectors)
+        if np.hypot(sum_dx, sum_dy) > TOLERANCE:
+            idx_long = int(np.argmax(lengths))
+            add_len = np.hypot(sum_dx, sum_dy)
+            old = lengths[idx_long]
+            lengths[idx_long] += add_len
+            theta = np.radians(headings[idx_long])
+            vectors[idx_long] = (lengths[idx_long] * np.cos(theta), lengths[idx_long] * np.sin(theta))
+            correction = f"תיקון צלע #{idx_long+1}: {old:.2f} → {lengths[idx_long]:.2f}"
 
-    # 3. בניה מחדש של נקודות למיקום מדוייק
-    angle_heading = 0.0
-    points = [(0.0, 0.0)]
-    for i in range(sides):
-        dx = lengths[i] * np.cos(np.radians(angle_heading))
-        dy = lengths[i] * np.sin(np.radians(angle_heading))
-        points.append((points[-1][0] + dx, points[-1][1] + dy))
-        angle_heading += 180 - angles_list[i]
+    # 5. בניית נקודות המצולע
+    verts = [(0.0, 0.0)]
+    for v in vectors:
+        x, y = verts[-1]
+        dx, dy = v
+        verts.append((x + dx, y + dy))
+    # נקודות המצולע ללא הסגירה האחרונה
+    poly = verts[:-1]
 
-    # 4. ציור המתאר
-    xs, ys = zip(*points)
+    # 6. שרטוט
+    xs = [p[0] for p in poly] + [poly[0][0]]
+    ys = [p[1] for p in poly] + [poly[0][1]]
     fig, ax = plt.subplots()
-    ax.plot(xs, ys, 'b-')
+    ax.plot(xs, ys, '-o')
     ax.set_aspect('equal')
     ax.axis('off')
 
-    # 5. סימון אורכים וזוויות
+    # 7. סימון אורכים וזוויות
     for i in range(sides):
-        # סימון אורך אמצעי
-        x_mid = (points[i][0] + points[i+1][0]) / 2
-        y_mid = (points[i][1] + points[i+1][1]) / 2
-        ax.text(x_mid, y_mid, f'{lengths[i]:.2f}', fontsize=10, color='blue')
+        p1 = poly[i]
+        p2 = poly[(i + 1) % sides]
+        # אמצע צלע
+        mx = (p1[0] + p2[0]) / 2
+        my = (p1[1] + p2[1]) / 2
+        ax.text(mx, my, f"{lengths[i]:.2f}", fontsize=10, color='blue')
 
-        # סימון זווית פנימית
-        p_prev = points[i-1]
-        p_curr = points[i]
-        p_next = points[i+1]
-        ang = compute_internal_angle(p_prev, p_curr, p_next)
+        # זווית פנימית
+        prev = poly[(i - 1) % sides]
+        curr = poly[i]
+        nxt = poly[(i + 1) % sides]
+        ang = compute_internal_angle(prev, curr, nxt)
 
-        # חישוב כיוון להצגת הטקסט
-        v1 = (np.array(p_prev) - np.array(p_curr))
-        v2 = (np.array(p_next) - np.array(p_curr))
-        bis = v1/np.linalg.norm(v1) + v2/np.linalg.norm(v2)
+        v1 = np.array(prev) - np.array(curr)
+        v2 = np.array(nxt) - np.array(curr)
+        bis = v1 / np.linalg.norm(v1) + v2 / np.linalg.norm(v2)
         bis /= np.linalg.norm(bis)
-        offset = 0.2 * min(lengths)
-        tx = p_curr[0] + bis[0] * offset
-        ty = p_curr[1] + bis[1] * offset
-
-        ax.text(tx, ty, f'{ang:.1f}°', fontsize=10,
+        offset = 0.1 * min(lengths)
+        tx = curr[0] + bis[0] * offset
+        ty = curr[1] + bis[1] * offset
+        ax.text(tx, ty, f"{ang:.1f}°", fontsize=10,
                 color='green', ha='center', va='center')
 
-    return fig, lengths, correction_message
+    return fig, lengths, correction
 
 
-# --- Streamlit UI ---
-st.title("🎯 אפליקציית מצולעים חכמה עם זוויות מותאמות")
+# --- UI ב-Streamlit ---
+st.title("🎯 אפליקציית שרטוט מצולעים חכמה")
 
-sides = st.number_input("🔺 כמה צלעות?", min_value=3, max_value=12, value=5)
+sides = st.number_input("כמה צלעות?", min_value=3, max_value=12, value=5)
 
-st.subheader("📏 אורכי צלעות")
+st.subheader("אורכי צלעות (השאר ריק לצלע חישובית)")
 lengths = []
 empty_count = 0
 for i in range(sides):
-    val = st.text_input(f"צלע {i + 1}", value="", key=f"len_{i}")
+    val = st.text_input(f"צלע {i+1}", value="", key=f"len_{i}")
     if val.strip() == "":
         lengths.append(None)
         empty_count += 1
@@ -149,46 +144,50 @@ for i in range(sides):
             lengths.append(float(val))
         except ValueError:
             st.error("יש להזין מספר או להשאיר ריק")
+            lengths.append(None)
+            empty_count += 1
 
-use_custom_angles = st.checkbox("אני רוצה להזין זוויות בעצמי")
-
-angles = []
-if use_custom_angles:
-    st.subheader("🎛 הזנת זוויות פנימיות (במעלות)")
+use_custom = st.checkbox("הזנת זוויות פנימיות בעצמך")
+custom_angles = None
+if use_custom:
+    st.subheader("הזן זוויות פנימיות (מעלות)")
+    custom_angles = []
     for i in range(sides):
-        val = st.text_input(f"זווית {i + 1}", value="108.0", key=f"angle_{i}")
-        try:
-            angles.append(float(val))
-        except ValueError:
-            st.error("יש להזין ערך מספרי לכל זווית")
+        val = st.text_input(f"זווית {i+1}", value="", key=f"ang_{i}")
+        if val.strip() == "":
+            custom_angles.append(None)
+        else:
+            try:
+                custom_angles.append(float(val))
+            except ValueError:
+                st.error("ערכים חייבים להיות מספריים")
+                custom_angles.append(None)
 
-if st.button("✏️ צייר מצולע"):
+if st.button("שרטוט מצולע"):
     if empty_count > 1:
-        st.error("אפשר להשאיר ריק רק שדה אחד")
-    elif use_custom_angles and len(angles) != sides:
-        st.error("יש להזין את כל הזוויות")
+        st.error("ניתן להשאיר ריק רק צלע אחת")
+    elif use_custom and (None in custom_angles):
+        st.error("יש למלא את כל הזוויות או לבטל הזנה עצמית")
     else:
-        fig, final_lengths, msg = draw_polygon(
+        fig, final_lens, msg = draw_polygon(
             sides,
-            lengths,
-            custom_angles=angles if use_custom_angles else None
+            lengths.copy(),
+            custom_angles if use_custom else None
         )
         st.pyplot(fig)
 
-        st.info("📐 אורכי הצלעות:")
-        for i, L in enumerate(final_lengths, start=1):
-            st.write(f"צלע {i}: {L:.2f}")
+        st.info("📐 אורכי הצלעות בספרות:")
+        for idx, L in enumerate(final_lens, start=1):
+            st.write(f"צלע {idx}: {L:.2f}")
 
         if msg:
             st.warning(f"⚠️ {msg}")
 
-        # אפשרות הורדה כ־PNG ו־PDF
+        # הורדות
         buf_png = BytesIO()
         fig.savefig(buf_png, format="png", dpi=300, bbox_inches='tight')
-        st.download_button("📥 הורד PNG", data=buf_png.getvalue(),
-                           file_name="polygon.png", mime="image/png")
+        st.download_button("🖼 הורד PNG", buf_png.getvalue(), "polygon.png", "image/png")
 
         buf_pdf = BytesIO()
         fig.savefig(buf_pdf, format="pdf", bbox_inches='tight')
-        st.download_button("📄 הורד PDF", data=buf_pdf.getvalue(),
-                           file_name="polygon.pdf", mime="application/pdf")
+        st.download_button("📄 הורד PDF", buf_pdf.getvalue(), "polygon.pdf", "application/pdf")
