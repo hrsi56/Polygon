@@ -51,20 +51,23 @@ def draw_polygon(sides, lengths, int_angles):
     if sides == 3 and all(L is not None for L in lengths) and int_angles is None:
         return draw_triangle(lengths)
 
+    vecs, missing = [], [i for i, L in enumerate(lengths) if L is None]
+
     if int_angles:
         ext = [180 - a for a in int_angles]
         headings = np.cumsum([0] + ext[:-1])
     else:
-        headings = np.cumsum([0] + [(sides-2)*180/sides]*(sides-1))
+        if len(missing) != 1:
+            st.error("אם לא ניתנו זוויות, יש להשאיר צלע אחת ריקה בלבד.")
+            return None, None
+        headings = np.cumsum([0] * sides)
 
-    vecs, missing = [], [i for i,L in enumerate(lengths) if L is None]
     for hd, L in zip(headings, lengths):
-        th = np.radians(hd)
-        vecs.append(None if L is None else (L*np.cos(th), L*np.sin(th)))
-
-    if len(missing) > 1:
-        st.error("ניתן להשאיר רק צלע אחת ריקה.")
-        return None, None
+        if L is not None:
+            th = np.radians(hd)
+            vecs.append((L * np.cos(th), L * np.sin(th)))
+        else:
+            vecs.append(None)
 
     if missing:
         dx = sum(v[0] for v in vecs if v)
@@ -93,15 +96,15 @@ def draw_polygon(sides, lengths, int_angles):
 
         prev, curr, nxt = pts[i-1], pts[i], pts[i+1]
         ang = compute_internal_angle(prev, curr, nxt)
-        bis = ((np.array(prev)-np.array(curr))/np.linalg.norm(prev-curr) +
-               (np.array(nxt)-np.array(curr))/np.linalg.norm(nxt-curr))
+        v1 = np.array(prev)-np.array(curr)
+        v2 = np.array(nxt)-np.array(curr)
+        bis = (v1/np.linalg.norm(v1) + v2/np.linalg.norm(v2))
         bis = bis / np.linalg.norm(bis) * 0.1 * min_l
         ax.text(curr[0]+bis[0], curr[1]+bis[1], f"{ang:.1f}°",
                 color='green', ha='center', va='center', fontsize=8)
 
     return fig, lengths
 
-# GUI Streamlit
 st.title("🎯 שרטוט מצולעים מתוקן")
 
 sides = st.number_input("מספר צלעות", 3, 12, 3, 1)
