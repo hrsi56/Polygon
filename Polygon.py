@@ -22,35 +22,62 @@ def draw_polygon(sides, lengths):
     ax.axis('off')
 
     for i in range(sides):
+        # אמצע צלע
         x = (points[i][0] + points[i + 1][0]) / 2
         y = (points[i][1] + points[i + 1][1]) / 2
         ax.text(x, y, f'{lengths[i]:.2f}', fontsize=10, color='blue')
-        x0, y0 = points[i]
-        ax.text(x0, y0, f'{internal_angle:.1f}°', fontsize=10, color='green')
+
+        # מיקום פנימי לזווית
+        p_prev = points[i - 1]
+        p_curr = points[i]
+        p_next = points[i + 1]
+
+        v1 = np.array([p_prev[0] - p_curr[0], p_prev[1] - p_curr[1]])
+        v2 = np.array([p_next[0] - p_curr[0], p_next[1] - p_curr[1]])
+
+        v1 = v1 / np.linalg.norm(v1)
+        v2 = v2 / np.linalg.norm(v2)
+        bisector = v1 + v2
+        bisector = bisector / np.linalg.norm(bisector)
+
+        offset = 0.2 * min(lengths)
+        angle_x = p_curr[0] + bisector[0] * offset
+        angle_y = p_curr[1] + bisector[1] * offset
+
+        ax.text(angle_x, angle_y, f'{internal_angle:.1f}°', fontsize=10, color='green', ha='center', va='center')
 
     return fig
 
-st.title("מצייר מצולעים")
+# --- Streamlit UI ---
+st.title("🎨 מצייר מצולעים")
 
-sides = st.number_input("כמה צלעות?", min_value=3, max_value=12, value=4)
+sides = st.number_input("🔺 כמה צלעות?", min_value=3, max_value=12, value=4)
 
 lengths = []
 for i in range(sides):
-    length = st.number_input(f"אורך צלע {i+1}", min_value=1.0, value=100.0)
+    length = st.number_input(f"אורך צלע {i + 1}", min_value=1.0, value=100.0, key=f"length_{i}")
     lengths.append(length)
 
 if st.button("צייר מצולע"):
     fig = draw_polygon(sides, lengths)
-
-    # הצגה בדף
     st.pyplot(fig)
 
-    # הורדה כקובץ
-    buf = BytesIO()
-    fig.savefig(buf, format="png", dpi=300, bbox_inches='tight')
+    # שמירה כ-PNG
+    png_buf = BytesIO()
+    fig.savefig(png_buf, format="png", dpi=300, bbox_inches='tight')
     st.download_button(
-        label="הורד כקובץ PNG",
-        data=buf.getvalue(),
+        label="📥 הורד כ-PNG",
+        data=png_buf.getvalue(),
         file_name="polygon_output.png",
         mime="image/png"
+    )
+
+    # שמירה כ-PDF
+    pdf_buf = BytesIO()
+    fig.savefig(pdf_buf, format="pdf", bbox_inches='tight')
+    st.download_button(
+        label="📄 הורד כ-PDF",
+        data=pdf_buf.getvalue(),
+        file_name="polygon_output.pdf",
+        mime="application/pdf"
     )
