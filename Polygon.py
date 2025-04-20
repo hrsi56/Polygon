@@ -49,7 +49,7 @@ def draw_polygon(sides, lengths):
     return fig
 
 # --- Streamlit UI ---
-st.title("🎨 מצייר מצולעים")
+st.title("🎨 מצייר מצולעים לינקו")
 
 sides = st.number_input("🔺 כמה צלעות?", min_value=3, max_value=12, value=4)
 
