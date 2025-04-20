@@ -20,9 +20,10 @@ def compute_internal_angle(p_prev, p_curr, p_next):
 def draw_polygon(sides, lengths, custom_angles=None):
     """
     בונה ומשרטט מצולע לפי מספר צלעות, אורכים וזוויות פנימיות.
-    מחזיר את הפיגורמה של matplotlib, רשימת אורכי הצלעות (כולל תיקונים)
+    מחזיר את פיגורמת matplotlib, רשימת אורכי הצלעות (כולל תיקונים)
     והודעת תיקון אם בוצע.
     """
+    # 1. חישוב זוויות פנימיות
     total_int_sum = 180 * (sides - 2)
     if custom_angles is not None:
         int_angles = custom_angles.copy()
@@ -38,9 +39,11 @@ def draw_polygon(sides, lengths, custom_angles=None):
         int_angles = [val] * sides
         correction = None
 
+    # 2. חישוב זוויות חיצוניות וכיווני ציור
     ext_angles = [180 - a for a in int_angles]
     headings = [sum(ext_angles[:i]) for i in range(sides)]
 
+    # 3. בניית וקטורי צלעות
     vectors = []
     missing_idx = None
     for i, L in enumerate(lengths):
@@ -51,8 +54,9 @@ def draw_polygon(sides, lengths, custom_angles=None):
         else:
             vectors.append((L * np.cos(theta), L * np.sin(theta)))
 
-    sum_dx = sum(v[0] for v in vectors if v is not None)
-    sum_dy = sum(v[1] for v in vectors if v is not None)
+    # 4. טיפול בצלע חסרה או תיקון סגירה (רק אם משולש או זוויות מותאמות)
+    sum_dx = sum(v[0] for v in vectors if v)
+    sum_dy = sum(v[1] for v in vectors if v)
     if missing_idx is not None:
         missing_len = np.hypot(-sum_dx, -sum_dy)
         lengths[missing_idx] = missing_len
@@ -69,7 +73,10 @@ def draw_polygon(sides, lengths, custom_angles=None):
                 theta = np.radians(headings[idx_long])
                 vectors[idx_long] = (lengths[idx_long] * np.cos(theta), lengths[idx_long] * np.sin(theta))
                 correction = f"תיקון צלע #{idx_long+1}: {old:.2f} → {lengths[idx_long]:.2f}"
+        else:
+            correction = None
 
+    # 5. בניית מערך נקודות המצולע
     verts = [(0.0, 0.0)]
     for v in vectors:
         x, y = verts[-1]
@@ -77,33 +84,39 @@ def draw_polygon(sides, lengths, custom_angles=None):
         verts.append((x + dx, y + dy))
     poly = verts[:-1]
 
+    # 6. שרטוט פרופורציונלי
     xs = [p[0] for p in poly] + [poly[0][0]]
     ys = [p[1] for p in poly] + [poly[0][1]]
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(6, 6))
     ax.plot(xs, ys, '-o')
-    ax.set_aspect('equal')
+    ax.set_aspect('equal', adjustable='box')
+    # הגדרת תחומי הצירים בדיוק לטווח הנתונים
+    ax.set_xlim(min(xs), max(xs))
+    ax.set_ylim(min(ys), max(ys))
     ax.axis('off')
 
+    # 7. סימון אורכים וזוויות
     min_len = min(l for l in lengths if l is not None)
     for i in range(sides):
         p1, p2 = poly[i], poly[(i + 1) % sides]
         mx, my = (p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2
         ax.text(mx, my, f"{lengths[i]:.2f}", fontsize=10, color='blue')
-        prev, curr, nxt = poly[(i-1)%sides], poly[i], poly[(i+1)%sides]
+        prev, curr, nxt = poly[(i - 1) % sides], poly[i], poly[(i + 1) % sides]
         ang = compute_internal_angle(prev, curr, nxt)
         v1 = np.array(prev) - np.array(curr)
         v2 = np.array(nxt) - np.array(curr)
-        bis = v1/np.linalg.norm(v1) + v2/np.linalg.norm(v2)
+        bis = v1 / np.linalg.norm(v1) + v2 / np.linalg.norm(v2)
         bis /= np.linalg.norm(bis)
         offset = 0.1 * min_len
-        tx, ty = curr[0] + bis[0]*offset, curr[1] + bis[1]*offset
+        tx, ty = curr[0] + bis[0] * offset, curr[1] + bis[1] * offset
         ax.text(tx, ty, f"{ang:.1f}°", fontsize=10, color='green', ha='center', va='center')
 
     return fig, lengths, correction
 
-# --- Streamlit UI ---
+# --- Streamlit GUI ---
 st.title("🎯 אפליקציית שרטוט מצולעים חכמה")
 
+# בחירת מספר הצלעות
 sides = st.number_input("כמה צלעות?", min_value=3, max_value=12, value=4)
 
 # קלט אורכי צלעות
@@ -111,7 +124,6 @@ st.subheader("📏 אורכי צלעות (השאר ריק לצלע חישובי�
 lengths = []
 empty_count = 0
 for i in range(sides):
-    # תוויות מותאמות למשולש
     if sides == 3:
         label = f"ניצב {i+1}" if i < 2 else "יתר"
     else:
@@ -135,17 +147,18 @@ if use_custom:
     st.subheader("🎛 הזן זוויות פנימיות")
     for i in range(sides):
         prev_edge = sides if i == 0 else i
-        next_edge = i+1
+        next_edge = i + 1
         prompt = f"פינה {i+1} בין צלע {prev_edge} לצלע {next_edge}"
         val = st.text_input(prompt, value="", key=f"ang_{i}")
         try:
-            custom_angles.append(None if val.strip()=="" else float(val))
+            custom_angles.append(None if val.strip() == "" else float(val))
         except ValueError:
             st.error("ערכים חייבים להיות מספריים")
             custom_angles[-1] = None
 
-# כפתור שרטוט
+# כפתור לשרטוט
 if st.button("✏️ שרטוט מצולע"):
+    # בדיקות קלט
     if empty_count > 1:
         st.error("ניתן להשאיר ריק רק צלע אחת")
     elif use_custom and any(a is None for a in custom_angles):
@@ -159,6 +172,7 @@ if st.button("✏️ שרטוט מצולע"):
             custom_angles if use_custom else None
         )
         st.pyplot(fig)
+        # הצגת אורכי הצלעות
         st.info("📐 אורכי הצלעות:")
         for idx, L in enumerate(final_lens, start=1):
             if sides == 3:
@@ -166,10 +180,11 @@ if st.button("✏️ שרטוט מצולע"):
             else:
                 name = f"צלע {idx}"
             st.write(f"{name}: {L:.2f}")
+        # הודעת תיקון
         if msg:
             st.warning(f"⚠️ {msg}")
 
-        # הורדות
+        # אפשרות הורדה כ-PNG ו-PDF
         buf_png = BytesIO()
         fig.savefig(buf_png, format="png", dpi=300, bbox_inches='tight')
         st.download_button("🖼 הורד PNG", buf_png.getvalue(), "polygon.png", "image/png")
