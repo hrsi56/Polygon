@@ -3,11 +3,61 @@ import matplotlib.pyplot as plt
 import numpy as np
 from io import BytesIO
 
+TOLERANCE = 1e-2  # טולרנס לפער קטן מאוד (0.01)
+
 def draw_polygon(sides, lengths):
     internal_angle = (sides - 2) * 180 / sides
-    points = [(0, 0)]
     angle = 0
+    points = [(0, 0)]
+    vectors = []
 
+    missing_index = None
+    if None in lengths:
+        missing_index = lengths.index(None)
+
+    # בניית וקטורים
+    for i in range(sides):
+        if i == missing_index:
+            vectors.append(None)
+            angle -= 180 - internal_angle
+            continue
+        dx = lengths[i] * np.cos(np.radians(angle))
+        dy = lengths[i] * np.sin(np.radians(angle))
+        vectors.append((dx, dy))
+        new_point = (points[-1][0] + dx, points[-1][1] + dy)
+        points.append(new_point)
+        angle -= 180 - internal_angle
+
+    # חישוב נקודת סיום
+    if missing_index is not None:
+        end_point = points[-1]
+        back_vector = (-end_point[0], -end_point[1])
+        length_missing = np.hypot(*back_vector)
+        lengths[missing_index] = length_missing
+        correction_message = f"בוצע חישוב לצלע החסרה (צלע {missing_index + 1}): {length_missing:.2f}"
+    else:
+        # בדיקה האם המצולע סגור
+        total_dx = sum(l[0] for l in vectors if l is not None)
+        total_dy = sum(l[1] for l in vectors if l is not None)
+        total_shift = np.hypot(total_dx, total_dy)
+
+        if total_shift > TOLERANCE:
+            # תיקון קל בצלע הארוכה ביותר
+            correction_vector = (-total_dx, -total_dy)
+            correction_length = np.hypot(*correction_vector)
+
+            longest_index = np.argmax(lengths)
+            old_length = lengths[longest_index]
+            new_length = old_length + correction_length
+
+            lengths[longest_index] = new_length
+            correction_message = f"בוצע תיקון קל בצלע {longest_index + 1} כדי לסגור את המצולע ({old_length:.2f} → {new_length:.2f})"
+        else:
+            correction_message = None
+
+    # בנייה מחדש של הנקודות
+    angle = 0
+    points = [(0, 0)]
     for i in range(sides):
         dx = lengths[i] * np.cos(np.radians(angle))
         dy = lengths[i] * np.sin(np.radians(angle))
@@ -15,6 +65,7 @@ def draw_polygon(sides, lengths):
         points.append(new_point)
         angle -= 180 - internal_angle
 
+    # ציור
     xs, ys = zip(*points)
     fig, ax = plt.subplots()
     ax.plot(xs, ys, 'b-')
@@ -27,7 +78,7 @@ def draw_polygon(sides, lengths):
         y = (points[i][1] + points[i + 1][1]) / 2
         ax.text(x, y, f'{lengths[i]:.2f}', fontsize=10, color='blue')
 
-        # מיקום פנימי לזווית
+        # מרכז זווית פנימית
         p_prev = points[i - 1]
         p_curr = points[i]
         p_next = points[i + 1]
@@ -46,38 +97,48 @@ def draw_polygon(sides, lengths):
 
         ax.text(angle_x, angle_y, f'{internal_angle:.1f}°', fontsize=10, color='green', ha='center', va='center')
 
-    return fig
+    return fig, lengths, correction_message
 
 # --- Streamlit UI ---
-st.title("🎨 מצייר מצולעים לינקו")
+st.title("🎯 מצייר מצולעים חכמים עם תיקון אוטומטי")
 
-sides = st.number_input("🔺 כמה צלעות?", min_value=3, max_value=12, value=4)
+sides = st.number_input("🔺 כמה צלעות?", min_value=3, max_value=12, value=5)
 
 lengths = []
+empty_count = 0
+
 for i in range(sides):
-    length = st.number_input(f"אורך צלע {i + 1}", min_value=1.0, value=100.0, key=f"length_{i}")
-    lengths.append(length)
+    val = st.text_input(f"אורך צלע {i + 1} (אפשר להשאיר אחד ריק)", value="", key=f"len_{i}")
+    if val.strip() == "":
+        lengths.append(None)
+        empty_count += 1
+    else:
+        try:
+            num = float(val)
+            lengths.append(num)
+        except ValueError:
+            st.error("יש להזין מספר או להשאיר ריק")
 
-if st.button("צייר מצולע"):
-    fig = draw_polygon(sides, lengths)
-    st.pyplot(fig)
+if st.button("✏️ צייר מצולע"):
+    if empty_count > 1:
+        st.error("אפשר להשאיר ריק רק שדה אחד!")
+    else:
+        fig, final_lengths, msg = draw_polygon(sides, lengths)
+        st.pyplot(fig)
 
-    # שמירה כ-PNG
-    png_buf = BytesIO()
-    fig.savefig(png_buf, format="png", dpi=300, bbox_inches='tight')
-    st.download_button(
-        label="📥 הורד כ-PNG",
-        data=png_buf.getvalue(),
-        file_name="polygon_output.png",
-        mime="image/png"
-    )
+        st.info("✏️ אורכי הצלעות הסופיים:")
+        for idx, l in enumerate(final_lengths, 1):
+            st.write(f"צלע {idx}: {l:.2f}")
 
-    # שמירה כ-PDF
-    pdf_buf = BytesIO()
-    fig.savefig(pdf_buf, format="pdf", bbox_inches='tight')
-    st.download_button(
-        label="📄 הורד כ-PDF",
-        data=pdf_buf.getvalue(),
-        file_name="polygon_output.pdf",
-        mime="application/pdf"
-    )
+        if msg:
+            st.warning(f"⚠️ {msg}")
+
+        # הורדה כ-PNG
+        buf_png = BytesIO()
+        fig.savefig(buf_png, format="png", dpi=300, bbox_inches='tight')
+        st.download_button("📥 הורד PNG", data=buf_png.getvalue(), file_name="polygon.png", mime="image/png")
+
+        # הורדה כ-PDF
+        buf_pdf = BytesIO()
+        fig.savefig(buf_pdf, format="pdf", bbox_inches='tight')
+        st.download_button("📄 הורד PDF", data=buf_pdf.getvalue(), file_name="polygon.pdf", mime="application/pdf")
