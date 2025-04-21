@@ -96,7 +96,7 @@ def draw_triangle(lengths):
 
 # ----------   מצולע כללי   ---------- #
 def draw_polygon(sides, lengths, int_angles):
-    if sides == 3 and all(L is not None for L in lengths) and int_angles is None:
+    if sides == 2 and all(L is not None for L in lengths) and int_angles is None:
         return draw_triangle(lengths)
 
     missing = [i for i, L in enumerate(lengths) if L is None]
