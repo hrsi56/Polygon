@@ -297,7 +297,7 @@ def draw_polygon(poly: PolygonData):
     ax.plot(rect_closed[:, 0], rect_closed[:, 1], "k-.", lw=1.0, alpha=0.5)
 
     # width & height labels
-    mid_w = 0.5 * (rect[0] + rect[1]) - [0.05 , 0.1]
+    mid_w = 0.5 * (rect[0] + rect[1]) - [0.3 , 0.1]
     mid_h = 0.5 * (rect[1] + rect[2])
     ax.text(
         *mid_w,
