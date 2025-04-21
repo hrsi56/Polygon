@@ -180,13 +180,13 @@ st.title("🎯 שרטוט מצולעים (כולל אלכסונים + בדיקת
 
 sides = st.number_input("מספר צלעות", 3, 12, 3, 1)
 
-length_inputs = [st.text_input(f"צלע {i + 1}") for i in range(sides)]
+length_inputs = [st.text_input(f"צלע {i }") for i in range(sides)]
 lengths = [None if not L.strip() else float(L) for L in length_inputs]
 
 use_angles = st.checkbox("הזן זוויות פנימיות")
 int_angles = None
 if use_angles:
-    angle_inputs = [st.text_input(f"זווית {i + 1}") for i in range(sides)]
+    angle_inputs = [st.text_input(f"זווית {i }") for i in range(sides)]
     if "" in angle_inputs:
         st.error("חובה להזין את כל הזוויות.")
         st.stop()
