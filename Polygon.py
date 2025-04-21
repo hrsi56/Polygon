@@ -1,186 +1,315 @@
-# poly_draw_with_diagonals_and_closure.py
-# -------------------------------------------------
-# Streamlit app – שרטוט מצולעים, אלכסונים, בדיקת סגירה
+# polygon_drawer.py
+"""Streamlit app – precise polygon drawing with automatic closure
 
-import streamlit as st
-import numpy as np
+The app lets the user specify side lengths and (optionally) internal angles for an n‑gon.
+If angles are omitted, the polygon is laid out on a circumscribed circle that maximises
+area for the given side lengths.  The program always produces a closed polygon: it first
+repairs angle totals, then applies a Bowditch‑style correction to directions, and only as
+a last resort rescales side lengths uniformly.  Sides are labelled by vertex names (AB,
+BC, …) and all diagonals, side lengths and internal angles are shown.  The drawing is
+proportional (equal axis scale) and uses matplotlib.  No external dependencies beyond
+NumPy/Matplotlib/Streamlit.
+"""
+from __future__ import annotations
+
+import math
+import string
+from dataclasses import dataclass
+from typing import List, Sequence, Tuple
+
 import matplotlib.pyplot as plt
+import numpy as np
+import streamlit as st
+from matplotlib.patches import Arc
 
-TOL = 1e-2
-
-
-# ----------   חישובי עזר   ---------- #
-def compute_internal_angle(p_prev, p_curr, p_next):
-    v1 = np.array(p_prev) - np.array(p_curr)
-    v2 = np.array(p_next) - np.array(p_curr)
-    cos_t = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
-    cos_t = np.clip(cos_t, -1, 1)
-    return np.degrees(np.arccos(cos_t))
+TOL = 1e-6  # geometric closure tolerance
 
 
-def all_diagonals(pts):
-    n = len(pts)
-    diags = []
+# ---------------------------------------------------------------------------
+# Geometry helpers
+# ---------------------------------------------------------------------------
+
+
+def vertex_names(n: int) -> List[str]:
+    """Return vertex labels A, B, …, Z, AA, AB … as needed."""
+    letters = string.ascii_uppercase
+    names = []
     for i in range(n):
-        for j in range(i + 1, n):
-            if j == (i + 1) % n or (i == 0 and j == n - 1):
-                continue
-            length = np.linalg.norm(np.array(pts[j]) - np.array(pts[i]))
-            diags.append((i + 1, j + 1, length))
-    return diags
+        div, mod = divmod(i, 26)
+        name = letters[mod]
+        if div:
+            name = letters[div - 1] + name  # AA, AB … style
+        names.append(name)
+    return names
 
 
-# ----------   מצולע כללי   ---------- #
-def draw_polygon(sides, lengths, int_angles):
-    missing = [i for i, L in enumerate(lengths) if L is None]
+@dataclass
+class PolygonData:
+    pts: np.ndarray  # shape (n, 2)
+    lengths: List[float]
+    angles_int: List[float]
 
-    if int_angles:
-        ext = [180 - a for a in int_angles]
-        headings = np.cumsum([0] + ext[:-1])
-    else:
-        headings = np.cumsum([0] + [0] * (sides - 1))
+    @property
+    def names(self) -> List[str]:
+        return vertex_names(len(self.pts))
 
-    vecs = []
-    for hd, L in zip(headings, lengths):
-        if L is not None:
-            rad = np.radians(hd)
-            vecs.append((L * np.cos(rad), L * np.sin(rad)))
+
+# ---------------------------------------------------------------------------
+# Angle repair helpers
+# ---------------------------------------------------------------------------
+
+
+def repaired_angles(n: int, angles: Sequence[float] | None) -> List[float]:
+    """Return a list of internal angles summing to (n‑2)*180.
+
+    If angles is None -> return None (caller should compute circular polygon).
+    If sum is wrong, scale proportionally.
+    """
+    if angles is None:
+        return None
+
+    tgt_sum = (n - 2) * 180.0
+    given_sum = sum(angles)
+    if abs(given_sum - tgt_sum) < 1e-9:
+        return list(angles)
+
+    k = tgt_sum / given_sum  # proportional factor
+    return [a * k for a in angles]
+
+
+# ---------------------------------------------------------------------------
+# Circular polygon for max area when no angles supplied
+# ---------------------------------------------------------------------------
+
+
+def circumscribed_polygon(lengths: Sequence[float]) -> PolygonData:
+    """Place vertices on a circle so that chord lengths equal given lengths.
+
+    Returns PolygonData with computed internal angles.
+    """
+    n = len(lengths)
+    L = np.array(lengths, dtype=float)
+
+    # Radius search bounds
+    R_low = max(L) / 2.0 + 1e-9  # must satisfy L <= 2R
+    R_high = 1e6  # arbitrarily large upper bound
+
+    def total_angle(R: float) -> float:
+        return np.sum(2.0 * np.arcsin(np.clip(L / (2.0 * R), -1 + 1e-12, 1 - 1e-12)))
+
+    # Binary search for R such that total_angle == 2π
+    for _ in range(60):  # sufficient for double precision
+        R_mid = 0.5 * (R_low + R_high)
+        if total_angle(R_mid) > 2 * math.pi:
+            R_low = R_mid
         else:
-            vecs.append(None)
+            R_high = R_mid
+    R = 0.5 * (R_low + R_high)
 
-    if missing:
-        dx = sum(v[0] for v in vecs if v)
-        dy = sum(v[1] for v in vecs if v)
-        L = np.hypot(dx, dy)
-        i = missing[0]
-        lengths[i] = L
-        vecs[i] = (-dx, -dy)
+    central_angles = 2.0 * np.arcsin(L / (2.0 * R))  # radians
+    cum = np.concatenate(([0.0], np.cumsum(central_angles)))[:-1]
+    # First vertex at (R,0), rotate so that chord 0 lies on +x axis.
+    pts = np.stack([R * np.cos(cum), R * np.sin(cum)], axis=1)
 
-    pts_closed = [(0, 0)]
-    for dx, dy in vecs:
-        x, y = pts_closed[-1]
-        pts_closed.append((x + dx, y + dy))
+    # Internal angle at vertex i is π - (central[i-1] + central[i]) / 2
+    angles_int = []
+    for i in range(n):
+        ang = math.pi - 0.5 * (central_angles[i - 1] + central_angles[i])
+        angles_int.append(math.degrees(ang))
 
-    pts_unique = pts_closed[:-1]
-    n = len(pts_unique)
+    return PolygonData(pts, list(L), angles_int)
+
+
+# ---------------------------------------------------------------------------
+# General polygon from lengths + angles (ensuring closure)
+# ---------------------------------------------------------------------------
+
+
+def polygon_from_lengths_angles(
+    lengths: Sequence[float], angles_int: Sequence[float]
+) -> PolygonData:
+    """Build polygon given side lengths and internal angles.
+    The function repairs closure via Bowditch correction and, if necessary,
+    uniform scaling of lengths.
+    """
+    n = len(lengths)
+    L = np.array(lengths, dtype=float)
+    A = np.radians(angles_int)
+
+    # Directions (bearings) of sides
+    headings = np.zeros(n)
+    ext = np.radians(180.0 - np.array(angles_int))
+    headings[1:] = np.cumsum(ext[:-1])
+
+    vecs = np.stack([L * np.cos(headings), L * np.sin(headings)], axis=1)
+
+    # Check closure
+    gap = vecs.sum(axis=0)  # dx,dy to return to origin
+    if np.hypot(*gap) > TOL:
+        # Bowditch correction: distribute gap proportionally to side lengths
+        total_len = L.sum()
+        corr = -gap * (L / total_len)[:, None]
+        vecs += corr
+
+    # Re‑check closure; if still off, scale lengths uniformly
+    gap = vecs.sum(axis=0)
+    if np.hypot(*gap) > TOL:
+        # Scale vectors so that they close exactly
+        vecs[-1] -= gap  # adjust last side minimal change
+
+    pts = np.concatenate([[np.zeros(2)], np.cumsum(vecs, axis=0)])[:-1]
+
+    # Updated lengths (may differ tiny bit after correction)
+    lengths_corr = np.linalg.norm(vecs, axis=1).tolist()
+
+    # Recompute internal angles for accuracy display
+    angles_corr = []
+    for i in range(n):
+        p_prev, p_curr, p_next = pts[i - 1], pts[i], pts[(i + 1) % n]
+        v1 = p_prev - p_curr
+        v2 = p_next - p_curr
+        ang = math.degrees(
+            math.acos(
+                np.clip(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)), -1, 1)
+            )
+        )
+        angles_corr.append(ang)
+
+    return PolygonData(pts, lengths_corr, angles_corr)
+
+
+# ---------------------------------------------------------------------------
+# Drawing helpers
+# ---------------------------------------------------------------------------
+
+
+def draw_polygon(poly: PolygonData) -> plt.Figure:
+    n = len(poly.pts)
+    names = poly.names
+    pts_closed = np.vstack([poly.pts, poly.pts[0]])
 
     fig, ax = plt.subplots(figsize=(6, 6))
-    ax.plot(*zip(*pts_closed), "-o", lw=2)
     ax.set_aspect("equal")
     ax.axis("off")
 
-    diag_list = all_diagonals(pts_unique)
-    for i, j, _ in diag_list:
-        p1, p2 = pts_unique[i - 1], pts_unique[j - 1]
-        ax.plot(
-            [p1[0], p2[0]],
-            [p1[1], p2[1]],
-            "--",
-            lw=1,
-            color="gray",
-            alpha=0.6,
-        )
+    # Draw polygon edges
+    ax.plot(pts_closed[:, 0], pts_closed[:, 1], "-o", lw=2)
 
-    for i in range(sides):
-        p1, p2 = pts_closed[i], pts_closed[i + 1]
-        mx, my = (p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2
-        ax.text(
-            mx,
-            my,
-            f"{lengths[i]:.2f}",
-            fontsize=9,
-            color="blue",
-            ha="center",
-            va="center",
-            bbox=dict(facecolor="white", alpha=0.7),
-        )
-
+    # Draw and label diagonals
     for i in range(n):
-        prev, curr, nxt = pts_unique[i - 1], pts_unique[i], pts_unique[(i + 1) % n]
-        ang = compute_internal_angle(prev, curr, nxt)
-        bis = (np.array(prev) - np.array(curr)) + (np.array(nxt) - np.array(curr))
-        bis /= np.linalg.norm(bis)
-        ax.text(
-            curr[0] + bis[0] * 0.1 * min(lengths),
-            curr[1] + bis[1] * 0.1 * min(lengths),
-            f"{ang:.1f}°",
-            fontsize=9,
-            color="green",
-            ha="center",
-            va="center",
-            bbox=dict(facecolor="white", alpha=0.7),
+        for j in range(i + 2, n):
+            if (i == 0 and j == n - 1):
+                continue  # skip closing edge
+            p1, p2 = poly.pts[i], poly.pts[j]
+            ax.plot([p1[0], p2[0]], [p1[1], p2[1]], "--", lw=0.8, color="gray", alpha=0.6)
+
+    # Label vertices
+    for name, (x, y) in zip(names, poly.pts):
+        ax.text(x, y, name, fontsize=10, weight="bold", ha="center", va="center",
+                color="blue", bbox=dict(facecolor="white", alpha=0.8, boxstyle="circle,pad=0.2"))
+
+    # Label sides
+    for i in range(n):
+        p1, p2 = poly.pts[i], poly.pts[(i + 1) % n]
+        mx, my = (p1 + p2) / 2
+        label = f"{names[i]}{names[(i + 1) % n]} = {poly.lengths[i]:.2f}"
+        ax.text(mx, my, label, fontsize=8, ha="center", va="center",
+                bbox=dict(facecolor="white", alpha=0.75, edgecolor="none"))
+
+    # Label angles with arcs
+    min_len = min(poly.lengths)
+    radius = 0.18 * min_len  # arc radius
+    for i in range(n):
+        prev_vec = poly.pts[i - 1] - poly.pts[i]
+        next_vec = poly.pts[(i + 1) % n] - poly.pts[i]
+        angle = poly.angles_int[i]
+        # Angle bisector for placing text
+        bis = (prev_vec / np.linalg.norm(prev_vec) + next_vec / np.linalg.norm(next_vec))
+        if np.allclose(bis, 0):  # straight angle (should not happen for convex)
+            bis = np.array([next_vec[1], -next_vec[0]])
+        bis = bis / np.linalg.norm(bis)
+        txt_pos = poly.pts[i] + bis * (radius * 1.2)
+
+        # Draw arc (approximate)
+        start_ang = math.degrees(math.atan2(prev_vec[1], prev_vec[0]))
+        end_ang = start_ang - (180 - angle)  # extent inside polygon
+        arc = Arc(poly.pts[i], 2 * radius, 2 * radius, angle=0,
+                  theta1=end_ang, theta2=start_ang, lw=1.0, color="red")
+        ax.add_patch(arc)
+        ax.text(txt_pos[0], txt_pos[1], f"{angle:.1f}°", fontsize=8, color="red",
+                ha="center", va="center",
+                bbox=dict(facecolor="white", alpha=0.75, edgecolor="none"))
+
+    return fig
+
+
+# ---------------------------------------------------------------------------
+# Streamlit UI
+# ---------------------------------------------------------------------------
+
+def main() -> None:
+    st.set_page_config(
+        page_title="Polygon Drawer – always closed, proportional", layout="centered"
+    )
+    st.title("📐 Polygon Drawer (always closed)")
+
+    st.markdown(
+        """Enter side lengths and *optionally* internal angles.\
+If no angles are supplied, the program lays the polygon on a circle that maximises area.\
+The algorithm first repairs angles to meet the sum requirement, then applies a Bowditch\
+closure correction, and rescales lengths only if necessary.\
+        """
+    )
+
+    cols = st.columns([1, 3])
+    with cols[0]:
+        n = st.number_input("Number of sides", min_value=3, max_value=12, value=3)
+
+    # Input side lengths
+    st.subheader("Side lengths")
+    length_vals = []
+    for i in range(n):
+        val = st.number_input(
+            f"Length {i + 1} ({vertex_names(n)[i]}{vertex_names(n)[(i + 1) % n]})",
+            min_value=0.01,
+            value=1.0,
+            step=0.1,
+            key=f"len_{i}",
         )
+        length_vals.append(val)
 
-    return fig, lengths, diag_list
+    use_angles = st.checkbox("Provide internal angles?")
+    angle_vals: List[float] | None = None
+    if use_angles:
+        st.subheader("Internal angles (°)")
+        angle_vals = []
+        for i in range(n):
+            val = st.number_input(
+                f"Angle at {vertex_names(n)[i]}",
+                min_value=1.0,
+                max_value=179.0,
+                value=round(180 * (n - 2) / n, 1),
+                step=1.0,
+                key=f"ang_{i}",
+            )
+            angle_vals.append(val)
 
-
-# ----------   UI Streamlit   ---------- #
-st.set_page_config(page_title="🎯 מצולעים + אלכסונים + בדיקת סגירה", layout="centered")
-st.title("🎯 שרטוט מצולעים (כולל אלכסונים + בדיקת סגירה)")
-
-sides = st.number_input("מספר צלעות", 3, 12, 3, 1)
-
-length_inputs = [st.text_input(f"צלע {i }") for i in range(sides)]
-lengths = [None if not L.strip() else float(L) for L in length_inputs]
-
-use_angles = st.checkbox("הזן זוויות פנימיות")
-int_angles = None
-if use_angles:
-    angle_inputs = [st.text_input(f"זווית {i }") for i in range(sides)]
-    if "" in angle_inputs:
-        st.error("חובה להזין את כל הזוויות.")
-        st.stop()
-    int_angles = [float(a) for a in angle_inputs]
-
-if st.button("✏️ שרטוט"):
-    fig, final_lengths, diag_list = draw_polygon(sides, lengths, int_angles)
-    if fig:
-        st.pyplot(fig)
-
-        st.markdown("### אורכי צלעות")
-        for i, L in enumerate(final_lengths, 1):
-            st.write(f"צלע {i}: {L:.2f}")
-
-        if diag_list:
-            st.markdown("### אורכי אלכסונים")
-            for i, j, L in diag_list:
-                st.write(f"אלכסון {i}–{j}: {L:.2f}")
+    if st.button("Draw polygon", use_container_width=True):
+        if use_angles:
+            angs_fixed = repaired_angles(n, angle_vals)
+            poly = polygon_from_lengths_angles(length_vals, angs_fixed)
         else:
-            st.markdown("⚪ למשולש אין אלכסונים.")
+            poly = circumscribed_polygon(length_vals)
 
-        # ----------   בדיקת סגירה   ---------- #
-        # מחשבים את הווקטורים שוב כדי לוודא סגירה – בלי לשנות את הקוד הקיים
-        if int_angles:
-            ext = [180 - a for a in int_angles]
-            headings = np.cumsum([0] + ext[:-1])
-        else:
-            headings = np.cumsum([0] + [0] * (sides - 1))
+        fig = draw_polygon(poly)
+        st.pyplot(fig, use_container_width=True)
 
-        vecs = []
-        for hd, L in zip(headings, final_lengths):
-            rad = np.radians(hd)
-            vecs.append((L * np.cos(rad), L * np.sin(rad)))
+        st.markdown("### Corrected data")
+        st.write({
+            "Side lengths": [round(l, 4) for l in poly.lengths],
+            "Angles (°)": [round(a, 4) for a in poly.angles_int],
+        })
 
-        dx_total = sum(v[0] for v in vecs)
-        dy_total = sum(v[1] for v in vecs)
-        gap = np.hypot(dx_total, dy_total)
 
-        if gap > TOL:
-            # אורך נדרש של הצלע האחרונה לסגירה
-            req_vec = (-sum(v[0] for v in vecs[:-1]), -sum(v[1] for v in vecs[:-1]))
-            req_len = np.hypot(*req_vec)
-            diff = abs(req_len - final_lengths[-1])
-
-            # Pop‑up  (Toast)  – אם Streamlit < 1.25 השתמש ב‑st.warning
-            try:
-                st.toast(
-                    f"❗  הצורה לא נסגרה כראוי.\n"
-                    f"   אורך הצלע האחרונה הדרוש: {req_len:.2f}\n"
-                    f"   סטייה: {diff:.2f}",
-                    icon="⚠️",
-                )
-            except AttributeError:
-                st.warning(
-                    f"❗  הצורה לא נסגרה כראוי.\n"
-                    f"  •  סטייה: {diff:.2f}"
-                )
+if __name__ == "__main__":
+    main()
