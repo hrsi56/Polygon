@@ -209,8 +209,8 @@ def draw_polygon(poly: PolygonData):
         # endpoint i
         vec_i = (p2 - p1) / np.linalg.norm(p2 - p1)
         label_vec_i = vec_i
-        ax.text(*(p1 + label_vec_i * 0.12 * min_len),
-                f"∠({d['end_i']['side']}) {d['end_i']['angle']:.1f}°",
+        ax.text(*(p1 + label_vec_i * 0.1 * min_len),
+                f"{d['end_i']['angle']:.1f}° to {d['end_i']['side']}",
                 fontsize=6, color="purple",
                 ha="center", va="center")
 
