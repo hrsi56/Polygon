@@ -27,7 +27,7 @@ import streamlit as st
 from matplotlib.patches import Arc
 
 TOL = 1e-6
-LABEL_SHIFT = 0.04        # outward label offset (fraction of min side)
+LABEL_SHIFT = 0.4       # outward label offset (fraction of min side)
 
 # ---------------------------------------------------------------------------
 # Helper geometry
