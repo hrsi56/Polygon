@@ -185,5 +185,5 @@ if st.button("✏️ שרטוט"):
             except AttributeError:
                 st.warning(
                     f"❗  הצורה לא נסגרה כראוי.\n"
-                    f"אורך הצלע האחרונה הדרוש: {req_len:.2f}  •  סטייה: {diff:.2f}"
+                    f"  •  סטייה: {diff:.2f}"
                 )
