@@ -343,7 +343,7 @@ def main():
 
 
     if st.button("Draw polygon", use_container_width=True):
-        fig, diag_list = draw_polygon(poly)
+        fig, diag_list, altitudes = draw_polygon(poly, show_alt)
         st.pyplot(fig, use_container_width=True)
 
         area_val = shoelace_area(poly.pts)
@@ -354,6 +354,10 @@ def main():
             "Bounding width": round(w, 4),
             "Bounding height": round(h, 4)
         }
+        if altitudes:
+            num_data["Altitudes"] = [round(a["length"], 4)
+                                     for a in altitudes]
+
         diag_data = {
             f"{poly.names[d['i']]}{poly.names[d['j']]}": {
                 "Length": round(d["length"], 3),
