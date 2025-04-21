@@ -38,9 +38,6 @@ def draw_polygon(sides, lengths, int_angles):
         ext = [180 - a for a in int_angles]
         headings = np.cumsum([0] + ext[:-1])
     else:
-        if len(missing) != 1:
-            st.error("אם לא ניתנו זוויות, יש להשאיר צלע אחת ריקה בלבד.")
-            return None, None, None
         headings = np.cumsum([0] + [0] * (sides - 1))
 
     vecs = []
