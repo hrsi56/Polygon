@@ -361,7 +361,7 @@ def main():
             f"∠ {vertex_names(n)[i]}", 1.0, 360.0,
             round(180 * (n - 2) / n, 1), 1.0, key=f"A{i}"
         ) for i in range(n)]
-        add_extra = st.checkbox("➕ הוסף צלע לסגירה אוטומטית")
+        add_extra = st.checkbox("אל תתקן את הנתונים. תסגור את הצורה כמו שנתתי.")
         if add_extra:
             poly = build_polygon_with_extra(lengths,
                                             repaired_angles(n, angs))
