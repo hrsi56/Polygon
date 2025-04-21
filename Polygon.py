@@ -24,30 +24,25 @@ def draw_triangle(lengths):
     y = np.sqrt(max(y2, 0.0))
     C = (x, y)
 
-    pts = [A, B, C, A]
+    pts = [A, B, C]
+    sides = [(A,B),(B,C),(C,A)]
     fig, ax = plt.subplots(figsize=(5,5))
-    xs, ys = zip(*pts)
-    ax.plot(xs, ys, '-o')
+    ax.plot(*zip(*pts,pts[0]), '-o')
     ax.set_aspect('equal')
     ax.axis('off')
 
-    side_labels = [L1, L2, L3]
-
-    for i, (p1, p2) in enumerate(zip(pts[:-1], pts[1:])):
+    for i, (p1, p2) in enumerate(sides):
         mx, my = (p1[0]+p2[0])/2, (p1[1]+p2[1])/2
-        ax.text(mx, my, f"{side_labels[i]:.2f}", color='blue', fontsize=10,
-                ha='center', va='center', bbox=dict(facecolor='white', alpha=0.6, edgecolor='none'))
+        ax.text(mx, my, f"{lengths[i]:.2f}", color='blue', fontsize=10,
+                ha='center', va='center', bbox=dict(facecolor='white', alpha=0.7))
 
-    for i, curr in enumerate(pts[:-1]):
+    for i, curr in enumerate(pts):
         prev, nxt = pts[i-1], pts[(i+1)%3]
         ang = compute_internal_angle(prev, curr, nxt)
-        v1 = np.array(prev)-np.array(curr)
-        v2 = np.array(nxt)-np.array(curr)
-        bis = (v1/np.linalg.norm(v1) + v2/np.linalg.norm(v2))
+        bis = (np.array(prev)-np.array(curr)) + (np.array(nxt)-np.array(curr))
         bis /= np.linalg.norm(bis)
-        ax.text(curr[0]+bis[0]*0.15*min(lengths), curr[1]+bis[1]*0.15*min(lengths), f"{ang:.1f}°",
-                color='green', ha='center', va='center', fontsize=10,
-                bbox=dict(facecolor='white', alpha=0.6, edgecolor='none'))
+        ax.text(curr[0]+bis[0]*0.1*min(lengths), curr[1]+bis[1]*0.1*min(lengths), f"{ang:.1f}°",
+                color='green', fontsize=10, ha='center', va='center', bbox=dict(facecolor='white', alpha=0.7))
 
     return fig, lengths
 
@@ -55,8 +50,7 @@ def draw_polygon(sides, lengths, int_angles):
     if sides == 3 and all(L is not None for L in lengths) and int_angles is None:
         return draw_triangle(lengths)
 
-    vecs, missing = [], [i for i, L in enumerate(lengths) if L is None]
-
+    missing = [i for i, L in enumerate(lengths) if L is None]
     if int_angles:
         ext = [180 - a for a in int_angles]
         headings = np.cumsum([0] + ext[:-1])
@@ -64,12 +58,13 @@ def draw_polygon(sides, lengths, int_angles):
         if len(missing) != 1:
             st.error("אם לא ניתנו זוויות, יש להשאיר צלע אחת ריקה בלבד.")
             return None, None
-        headings = np.cumsum([0] * sides)
+        headings = np.cumsum([0] + [0]*(sides-1))
 
+    vecs = []
     for hd, L in zip(headings, lengths):
         if L is not None:
-            th = np.radians(hd)
-            vecs.append((L * np.cos(th), L * np.sin(th)))
+            rad = np.radians(hd)
+            vecs.append((L*np.cos(rad), L*np.sin(rad)))
         else:
             vecs.append(None)
 
@@ -81,33 +76,29 @@ def draw_polygon(sides, lengths, int_angles):
         lengths[i] = L
         vecs[i] = (-dx, -dy)
 
-    pts = [(0.,0.)]
+    pts = [(0,0)]
     for dx, dy in vecs:
         x, y = pts[-1]
         pts.append((x+dx, y+dy))
 
     fig, ax = plt.subplots(figsize=(5,5))
-    xs, ys = zip(*pts)
-    ax.plot(xs, ys, '-o')
+    ax.plot(*zip(*pts), '-o')
     ax.set_aspect('equal')
     ax.axis('off')
 
     for i in range(sides):
         p1, p2 = pts[i], pts[i+1]
         mx, my = (p1[0]+p2[0])/2, (p1[1]+p2[1])/2
-        ax.text(mx, my, f"{lengths[i]:.2f}", color='blue', fontsize=10,
-                ha='center', va='center', bbox=dict(facecolor='white', alpha=0.6, edgecolor='none'))
+        ax.text(mx, my, f"{lengths[i]:.2f}", fontsize=10, color='blue',
+                ha='center', va='center', bbox=dict(facecolor='white', alpha=0.7))
 
     for i in range(sides):
         prev, curr, nxt = pts[i-1], pts[i], pts[(i+1)%sides]
         ang = compute_internal_angle(prev, curr, nxt)
-        v1 = np.array(prev)-np.array(curr)
-        v2 = np.array(nxt)-np.array(curr)
-        bis = (v1/np.linalg.norm(v1) + v2/np.linalg.norm(v2))
+        bis = (np.array(prev)-np.array(curr))+(np.array(nxt)-np.array(curr))
         bis /= np.linalg.norm(bis)
-        ax.text(curr[0]+bis[0]*0.15*min(lengths), curr[1]+bis[1]*0.15*min(lengths), f"{ang:.1f}°",
-                color='green', ha='center', va='center', fontsize=10,
-                bbox=dict(facecolor='white', alpha=0.6, edgecolor='none'))
+        ax.text(curr[0]+bis[0]*0.1*min(lengths), curr[1]+bis[1]*0.1*min(lengths), f"{ang:.1f}°",
+                fontsize=10, color='green', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.7))
 
     return fig, lengths
 
