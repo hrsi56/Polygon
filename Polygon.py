@@ -245,16 +245,38 @@ def draw_polygon(poly: PolygonData):
                           edgecolor="none"),
                 ha="center", va="center")
 
-    # ----- internal angle arcs (no numeric) -------------------------------
+    # Internal angles ----------------------------------------------------------
     for i in range(n):
         p = poly.pts[i]
         v_prev = poly.pts[i - 1] - p
         v_next = poly.pts[(i + 1) % n] - p
+        bis = v_prev / np.linalg.norm(v_prev) + v_next / np.linalg.norm(v_next)
+        bis = bis / np.linalg.norm(bis) if np.linalg.norm(bis) else np.array(
+            [v_next[1], -v_next[0]]
+        )
+        txt = p + bis * (0.23 * min_len)
         start = math.degrees(math.atan2(v_prev[1], v_prev[0]))
         end = start - (180 - poly.angles_int[i])
-        ax.add_patch(Arc(p, 0.36 * min_len, 0.36 * min_len,
-                         theta1=end, theta2=start,
-                         lw=1, color="red"))
+        ax.add_patch(
+            Arc(
+                p,
+                0.36 * min_len,
+                0.36 * min_len,
+                theta1=end,
+                theta2=start,
+                lw=1,
+                color="red",
+            )
+        )
+        ax.text(
+            *txt,
+            f"{poly.angles_int[i]:.1f}°",
+            fontsize=7,
+            color="red",
+            ha="center",
+            va="center",
+        )
+
 
     # ----- area label ------------------------------------------------------
     ax.text(*(centroid(poly.pts) - np.array([0, 0.05])),
