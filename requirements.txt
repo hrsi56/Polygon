@@ -4,4 +4,4 @@ numpy
 # Optional extras
 # scipy>=1.13 
 # root‑finding, אופטימיזציה
-shapely>=2.0 # פעולות גאומטריות מדויקות
+shapely # פעולות גאומטריות מדויקות
