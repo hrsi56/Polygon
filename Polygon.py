@@ -194,7 +194,7 @@ def draw_polygon(sides, lengths, int_angles):
     if not closed:
         # המלצות תיקון
         last_len = lengths[-1]
-        new_len = last_len + gap
+        new_len = last_len - gap
         v_last = vecs[-1]
         hd_last = (np.degrees(np.arctan2(v_last[1], v_last[0]))) % 360
         hd_needed = (np.degrees(np.arctan2(-dy, -dx))) % 360
