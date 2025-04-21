@@ -30,65 +30,8 @@ def all_diagonals(pts):
     return diags
 
 
-# ----------   משולש   ---------- #
-def draw_triangle(lengths):
-    L1, L2, L3 = lengths
-    A = (0.0, 0.0)
-    B = (L1, 0.0)
-
-    x = (L1 ** 2 + L2 ** 2 - L3 ** 2) / (2 * L1)
-    y2 = L2 ** 2 - x ** 2
-    if y2 < -TOL:
-        st.error("לא ניתן לבנות משולש עם אורכים אלה.")
-        return None, None, None
-    y = np.sqrt(max(y2, 0.0))
-    C = (x, y)
-
-    pts = [A, B, C]
-    fig, ax = plt.subplots(figsize=(5, 5))
-    ax.plot(*zip(*pts, pts[0]), "-o")
-    ax.set_aspect("equal")
-    ax.axis("off")
-
-    # תוויות צלעות
-    for i, (p1, p2) in enumerate([(A, B), (B, C), (C, A)]):
-        mx, my = (p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2
-        ax.text(
-            mx,
-            my,
-            f"{lengths[i]:.2f}",
-            color="blue",
-            fontsize=10,
-            ha="center",
-            va="center",
-            bbox=dict(facecolor="white", alpha=0.7),
-        )
-
-    # תוויות זוויות
-    for i, curr in enumerate(pts):
-        prev, nxt = pts[i - 1], pts[(i + 1) % 3]
-        ang = compute_internal_angle(prev, curr, nxt)
-        bis = (np.array(prev) - np.array(curr)) + (np.array(nxt) - np.array(curr))
-        bis /= np.linalg.norm(bis)
-        ax.text(
-            curr[0] + bis[0] * 0.1 * min(lengths),
-            curr[1] + bis[1] * 0.1 * min(lengths),
-            f"{ang:.1f}°",
-            color="green",
-            fontsize=10,
-            ha="center",
-            va="center",
-            bbox=dict(facecolor="white", alpha=0.7),
-        )
-
-    return fig, lengths, []
-
-
 # ----------   מצולע כללי   ---------- #
 def draw_polygon(sides, lengths, int_angles):
-    if sides == 3 and all(L is not None for L in lengths) and int_angles is None:
-        return draw_triangle(lengths)
-
     missing = [i for i, L in enumerate(lengths) if L is None]
 
     if int_angles:
