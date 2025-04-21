@@ -257,17 +257,6 @@ def draw_polygon(poly: PolygonData):
         txt = p + bis * (0.23 * min_len)
         start = math.degrees(math.atan2(v_prev[1], v_prev[0]))
         end = start - (180 - poly.angles_int[i])
-        ax.add_patch(
-            Arc(
-                p,
-                0.36 * min_len,
-                0.36 * min_len,
-                theta1=end,
-                theta2=start,
-                lw=1,
-                color="red",
-            )
-        )
         ax.text(
             *txt,
             f"{poly.angles_int[i]:.1f}°",
