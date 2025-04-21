@@ -216,7 +216,7 @@ def draw_polygon(poly: PolygonData):
 
         # endpoint j
         vec_j = (p1 - p2) / np.linalg.norm(p1 - p2)
-        ax.text(*(p2 + vec_j * 0.12 * min_len),
+        ax.text(*(p2 + vec_j * 0.1 * min_len),
                 f"{d['end_j']['angle']:.1f}° to {d['end_j']['side']}",
                 fontsize=6, color="purple",
                 ha="center", va="center")
