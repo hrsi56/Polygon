@@ -299,7 +299,7 @@ def draw_polygon(poly: PolygonData):
     # width & height labels
     mid_w = 0.5 * (rect[0] + rect[1])
     mid_h = 0.5 * (rect[1] + rect[2])
-    print(mid_w)
+    st.subheader(mid_w)
     ax.text(
         *mid_w,
         f"w={w:.2f}",
