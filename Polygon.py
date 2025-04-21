@@ -1,14 +1,16 @@
-# polygon_drawer.py – v1.4 (2025‑04‑21)
+# polygon_drawer.py – v1.5 (2025‑04‑21)
 # -----------------------------------------------------------
 # Streamlit app – closed, proportional polygon drawing
 #
-# ✦ Validity check: stops if side lengths cannot form a polygon.
-# ✦ Diagonals: length + one partial angle per endpoint,
-#    labelled with the adjacent side it’s measured against:
-#         ∠(AB) 34.2°
+# ✦ Validity check: side lengths must satisfy polygon inequality.
+# ✦ Diagonals: length + one partial angle per endpoint,
+#    labelled with the adjacent side it is measured against:
+#        ∠(AB) 34.2°
 # ✦ Area written at the centroid.
 # ✦ Axis‑aligned bounding rectangle with width/height labels.
 # ✦ Outward‑offset labels to reduce collisions.
+# ✦ **Triangle extra**: optional altitudes (heights) in magenta dotted lines
+#    with their lengths.
 # ✦ Single ZIP download (TXT + PNG + PDF + SVG).
 # -----------------------------------------------------------
 from __future__ import annotations
@@ -25,13 +27,13 @@ from typing import List, Sequence
 import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
-
+from matplotlib.patches import Arc
 
 TOL = 1e-6
-LABEL_SHIFT = -0.05        # outward label offset (fraction of min side)
+LABEL_SHIFT = -0.05          # outward offset fraction
 
 
-# ────── geometry helpers ──────────────────────────────────────────────────
+# ────────── geometry helpers ──────────────────────────────────────────────
 def vertex_names(n: int) -> List[str]:
     letters = string.ascii_uppercase
     return [(letters[i] if i < 26 else letters[i // 26 - 1] + letters[i % 26])
@@ -40,8 +42,10 @@ def vertex_names(n: int) -> List[str]:
 
 def angle_between(u: np.ndarray, v: np.ndarray) -> float:
     return math.degrees(
-        math.acos(np.clip(np.dot(u, v) /
-                          (np.linalg.norm(u) * np.linalg.norm(v)), -1, 1))
+        math.acos(
+            np.clip(np.dot(u, v) /
+                    (np.linalg.norm(u) * np.linalg.norm(v)), -1, 1)
+        )
     )
 
 
@@ -66,7 +70,7 @@ def is_polygon_possible(lengths: Sequence[float]) -> bool:
     return L[-1] < sum(L[:-1]) - 1e-9
 
 
-# ────── data structure ────────────────────────────────────────────────────
+# ────────── data structure ────────────────────────────────────────────────
 @dataclass
 class PolygonData:
     pts: np.ndarray
@@ -78,7 +82,7 @@ class PolygonData:
         return vertex_names(len(self.pts))
 
 
-# ────── construction functions ───────────────────────────────────────────
+# ────────── construction functions ────────────────────────────────────────
 def repaired_angles(n: int, angs: Sequence[float] | None):
     if angs is None:
         return None
@@ -137,12 +141,11 @@ def build_polygon(lengths: Sequence[float],
     return PolygonData(pts, lengths_corr, angles_corr)
 
 
-# ────── diagonals with single‑reference angle ─────────────────────────────
+# ────────── diagonals info ────────────────────────────────────────────────
 def diagonals_info(poly: PolygonData):
-    pts = poly.pts
-    names = poly.names
+    pts, names = poly.pts, poly.names
     n = len(pts)
-    info = []
+    out = []
     for i in range(n):
         for j in range(i + 2, n):
             if i == 0 and j == n - 1:
@@ -150,8 +153,7 @@ def diagonals_info(poly: PolygonData):
             v = pts[j] - pts[i]
             length = float(np.linalg.norm(v))
 
-            def pick_angle(idx: int, vec: np.ndarray):
-                # vectors of adjacent sides from vertex idx
+            def pick(idx, vec):
                 prev_vec = pts[idx - 1] - pts[idx]
                 next_vec = pts[(idx + 1) % n] - pts[idx]
                 ang_prev = angle_between(vec, prev_vec)
@@ -161,19 +163,17 @@ def diagonals_info(poly: PolygonData):
                 else:
                     return ang_next, f"{names[idx]}{names[(idx + 1) % n]}"
 
-            ang_i, side_i = pick_angle(i, v)
-            ang_j, side_j = pick_angle(j, -v)
-
-            info.append(dict(
-                i=i, j=j,
-                length=length,
+            ang_i, side_i = pick(i, v)
+            ang_j, side_j = pick(j, -v)
+            out.append(dict(
+                i=i, j=j, length=length,
                 end_i=dict(side=side_i, angle=ang_i),
                 end_j=dict(side=side_j, angle=ang_j)
             ))
-    return info
+    return out
 
 
-# ────── bounding rectangle ────────────────────────────────────────────────
+# ────────── bounding rectangle ────────────────────────────────────────────
 def bounding_rect(pts: np.ndarray):
     xmin, ymin = pts.min(axis=0)
     xmax, ymax = pts.max(axis=0)
@@ -182,8 +182,30 @@ def bounding_rect(pts: np.ndarray):
     return rect, xmax - xmin, ymax - ymin
 
 
-# ────── drawing routine ───────────────────────────────────────────────────
-def draw_polygon(poly: PolygonData):
+# ────────── triangle altitudes ────────────────────────────────────────────
+def triangle_altitudes(pts: np.ndarray):
+    """Return list of dicts with keys: 'from', 'to', 'foot', 'length'."""
+    alt = []
+    names = vertex_names(3)
+    for idx in range(3):
+        A = pts[idx]
+        B = pts[(idx + 1) % 3]
+        C = pts[(idx + 2) % 3]
+        BC_vec = C - B
+        t = np.dot(A - B, BC_vec) / np.dot(BC_vec, BC_vec)
+        foot = B + t * BC_vec
+        length = float(np.linalg.norm(A - foot))
+        alt.append(dict(
+            from_v=idx,
+            to_side=f"{names[(idx + 1) % 3]}{names[(idx + 2) % 3]}",
+            foot=foot,
+            length=length
+        ))
+    return alt
+
+
+# ────────── drawing routine ───────────────────────────────────────────────
+def draw_polygon(poly: PolygonData, show_altitudes: bool):
     n = len(poly.pts)
     names = poly.names
     pts_closed = np.vstack([poly.pts, poly.pts[0]])
@@ -191,37 +213,35 @@ def draw_polygon(poly: PolygonData):
     fig, ax = plt.subplots(figsize=(7, 7))
     ax.set_aspect("equal")
     ax.axis("off")
-    ax.plot(pts_closed[:, 0], pts_closed[:, 1], "-o", lw=1.4, color= "black" , alpha=0.6 )
+    ax.plot(pts_closed[:, 0], pts_closed[:, 1],
+            "-o", lw=1.4, color="black", alpha=0.6)
 
     min_len = min(poly.lengths)
 
-    # ----- diagonals -------------------------------------------------------
+    # -------- diagonals ----------------------------------------------------
     diags = diagonals_info(poly)
     for d in diags:
         p1, p2 = poly.pts[d["i"]], poly.pts[d["j"]]
         ax.plot([p1[0], p2[0]], [p1[1], p2[1]],
                 "--", lw=0.8, color="gray", alpha=0.6)
         mid = 0.5 * (p1 + p2)
-        ax.text(*mid, f"{d['length']:.2f}",
-                fontsize=6, color="gray",
-                ha="center", va="center")
+        ax.text(*mid, f"{d['length']:.2f}", fontsize=6,
+                color="gray", ha="center", va="center")
 
-        # endpoint i
+        # endpoint‑i angle
         vec_i = (p2 - p1) / np.linalg.norm(p2 - p1)
-        label_vec_i = vec_i
-        ax.text(*(p1 + label_vec_i * 0.1 * min_len),
+        ax.text(*(p1 + vec_i * 0.1 * min_len),
                 f"{d['end_i']['angle']:.1f}° to {d['end_i']['side']}",
                 fontsize=6, color="orange",
                 ha="center", va="center")
-
-        # endpoint j
+        # endpoint‑j angle
         vec_j = (p1 - p2) / np.linalg.norm(p1 - p2)
         ax.text(*(p2 + vec_j * 0.1 * min_len),
                 f"{d['end_j']['angle']:.1f}° to {d['end_j']['side']}",
                 fontsize=6, color="orange",
                 ha="center", va="center")
 
-    # ----- vertices & sides ------------------------------------------------
+    # -------- vertices & sides --------------------------------------------
     for i, (x, y) in enumerate(poly.pts):
         prev_vec = poly.pts[i] - poly.pts[i - 1]
         next_vec = poly.pts[(i + 1) % n] - poly.pts[i]
@@ -231,8 +251,8 @@ def draw_polygon(poly: PolygonData):
             normal /= np.linalg.norm(normal)
         ax.text(x + normal[0] * LABEL_SHIFT * min_len,
                 y + normal[1] * LABEL_SHIFT * min_len,
-                names[i], fontsize=9, weight="bold",
-                color="blue", ha="center", va="center",
+                names[i], fontsize=9, weight="bold", color="blue",
+                ha="center", va="center",
                 bbox=dict(facecolor="white", alpha=0.8,
                           boxstyle="circle,pad=0.25"))
 
@@ -241,61 +261,57 @@ def draw_polygon(poly: PolygonData):
         edge_norm = np.array([-edge[1], edge[0]]) / np.linalg.norm(edge)
         ax.text(*(mid + edge_norm * LABEL_SHIFT * min_len),
                 f"{poly.lengths[i]:.2f}", fontsize=7,
-                bbox=dict(facecolor="white", alpha=0.7,
-                          edgecolor="none"),
+                bbox=dict(facecolor="white", alpha=0.7, edgecolor="none"),
                 ha="center", va="center")
 
-    # Internal angles ----------------------------------------------------------
+    # -------- internal angle arcs (no numeric) ----------------------------
     for i in range(n):
         p = poly.pts[i]
         v_prev = poly.pts[i - 1] - p
         v_next = poly.pts[(i + 1) % n] - p
-        bis = v_prev / np.linalg.norm(v_prev) + v_next / np.linalg.norm(v_next)
-        bis = bis / np.linalg.norm(bis) if np.linalg.norm(bis) else np.array(
-            [v_next[1], -v_next[0]]
-        )
-        txt = p + bis * (0.23 * min_len)
         start = math.degrees(math.atan2(v_prev[1], v_prev[0]))
         end = start - (180 - poly.angles_int[i])
-        ax.text(
-            *txt,
-            f"{poly.angles_int[i]:.1f}°",
-            fontsize=7,
-            color="red",
-            ha="center",
-            va="center",
-        )
+        ax.add_patch(Arc(p, 0.36 * min_len, 0.36 * min_len,
+                         theta1=end, theta2=start,
+                         lw=1, color="red"))
 
+    # -------- altitudes for triangle --------------------------------------
+    altitudes_data = None
+    if show_altitudes and n == 3:
+        altitudes_data = triangle_altitudes(poly.pts)
+        for alt in altitudes_data:
+            A = poly.pts[alt["from_v"]]
+            foot = alt["foot"]
+            ax.plot([A[0], foot[0]], [A[1], foot[1]],
+                    ":", color="magenta", lw=1.2)
+            ax.text(*foot, f"h={alt['length']:.2f}", fontsize=6,
+                    color="magenta", ha="left", va="bottom")
 
-    # ----- area label ------------------------------------------------------
+    # -------- area & bounding rect ----------------------------------------
     ax.text(*(centroid(poly.pts) - np.array([0, 0.05])),
             f"Area = {shoelace_area(poly.pts):.2f}",
             fontsize=9, color="green",
             ha="center", va="center",
-            bbox=dict(facecolor="white", alpha=0.7,
-                      edgecolor="none"))
+            bbox=dict(facecolor="white", alpha=0.7, edgecolor="none"))
 
-    # ----- bounding rectangle ---------------------------------------------
     rect, w, h = bounding_rect(poly.pts)
     rc = np.vstack([rect, rect[0]])
     ax.plot(rc[:, 0], rc[:, 1], "k-.", lw=1, alpha=0.5)
-    HW = h*w
+
     mid_w = 0.5 * (rect[0] + rect[1]) - np.array([0.1, 0.05])
     mid_h = 0.5 * (rect[1] + rect[2]) + np.array([0.01, 0.05])
     ax.text(*mid_w, f"w={w:.2f}", fontsize=8,
             ha="center", va="bottom")
     ax.text(*mid_h, f"h={h:.2f}", fontsize=8,
             ha="left", va="center")
-    ax.text(*(rect[0]+0.03), f"Area={HW:.2f}", fontsize=8,
-            ha="left", va="center")
 
-    return fig, diags
+    return fig, diags, altitudes_data
 
 
-# ────── Streamlit UI ───────────────────────────────────────────────────────
+# ────────── Streamlit UI ───────────────────────────────────────────────────
 def main():
     st.set_page_config(page_title="Polygon Drawer", layout="centered")
-    st.title("📐 Polygon Drawer – לינקו. בתמורה לטובות הנעה")
+    st.title("📐 Polygon Drawer – with optional triangle altitudes")
 
     n = st.number_input("Number of sides", 3, 12, 4, 1)
     lengths = [st.number_input(f"Length {i + 1}", 0.01, 1000.0,
@@ -305,17 +321,22 @@ def main():
         st.error("⚠️  Side lengths violate polygon inequality.")
         st.stop()
 
-    if st.checkbox("Provide internal angles?"):
+    use_angles = st.checkbox("Provide internal angles?")
+    if use_angles:
         angs = [st.number_input(
-            f"∠ {vertex_names(n)[i]}", 1.0, 360.0,
+            f"∠ {vertex_names(n)[i]}", 1.0, 179.0,
             round(180 * (n - 2) / n, 1), 1.0, key=f"A{i}"
         ) for i in range(n)]
         poly = build_polygon(lengths, repaired_angles(n, angs))
     else:
         poly = circumscribed_polygon(lengths)
 
+    show_alt = False
+    if n == 3:
+        show_alt = st.checkbox("Show altitudes (triangle only)")
+
     if st.button("Draw polygon", use_container_width=True):
-        fig, diag_list = draw_polygon(poly)
+        fig, diag_list, altitudes = draw_polygon(poly, show_alt)
         st.pyplot(fig, use_container_width=True)
 
         area_val = shoelace_area(poly.pts)
@@ -326,6 +347,10 @@ def main():
             "Bounding width": round(w, 4),
             "Bounding height": round(h, 4)
         }
+        if altitudes:
+            num_data["Altitudes"] = [round(a["length"], 4)
+                                     for a in altitudes]
+
         diag_data = {
             f"{poly.names[d['i']]}{poly.names[d['j']]}": {
                 "Length": round(d["length"], 3),
