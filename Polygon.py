@@ -191,7 +191,7 @@ def draw_polygon(poly: PolygonData):
     fig, ax = plt.subplots(figsize=(7, 7))
     ax.set_aspect("equal")
     ax.axis("off")
-    ax.plot(pts_closed[:, 0], pts_closed[:, 1], "-o", lw=2)
+    ax.plot(pts_closed[:, 0], pts_closed[:, 1], "-o", lw=1, color= "gray")
 
     min_len = min(poly.lengths)
 
