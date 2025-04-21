@@ -41,9 +41,9 @@ def check_closure(pts_closed):
     return False, gap, dx, dy
 
 
+
 # ----------   מצולע כללי   ---------- #
 def draw_polygon(sides, lengths, int_angles):
-
 
     missing = [i for i, L in enumerate(lengths) if L is None]
 
