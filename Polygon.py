@@ -31,9 +31,11 @@ def draw_triangle(lengths):
     ax.set_aspect('equal')
     ax.axis('off')
 
+    side_labels = [L1, L2, L3]
+
     for i, (p1, p2) in enumerate(zip(pts[:-1], pts[1:])):
         mx, my = (p1[0]+p2[0])/2, (p1[1]+p2[1])/2
-        ax.text(mx, my, f"{lengths[i]:.2f}", color='blue', fontsize=10,
+        ax.text(mx, my, f"{side_labels[i]:.2f}", color='blue', fontsize=10,
                 ha='center', va='center', bbox=dict(facecolor='white', alpha=0.6, edgecolor='none'))
 
     for i, curr in enumerate(pts[:-1]):
@@ -43,7 +45,7 @@ def draw_triangle(lengths):
         v2 = np.array(nxt)-np.array(curr)
         bis = (v1/np.linalg.norm(v1) + v2/np.linalg.norm(v2))
         bis /= np.linalg.norm(bis)
-        ax.text(curr[0]+bis[0]*0.2, curr[1]+bis[1]*0.2, f"{ang:.1f}°",
+        ax.text(curr[0]+bis[0]*0.15*min(lengths), curr[1]+bis[1]*0.15*min(lengths), f"{ang:.1f}°",
                 color='green', ha='center', va='center', fontsize=10,
                 bbox=dict(facecolor='white', alpha=0.6, edgecolor='none'))
 
@@ -90,7 +92,6 @@ def draw_polygon(sides, lengths, int_angles):
     ax.set_aspect('equal')
     ax.axis('off')
 
-    min_l = min(lengths)
     for i in range(sides):
         p1, p2 = pts[i], pts[i+1]
         mx, my = (p1[0]+p2[0])/2, (p1[1]+p2[1])/2
@@ -104,7 +105,7 @@ def draw_polygon(sides, lengths, int_angles):
         v2 = np.array(nxt)-np.array(curr)
         bis = (v1/np.linalg.norm(v1) + v2/np.linalg.norm(v2))
         bis /= np.linalg.norm(bis)
-        ax.text(curr[0]+bis[0]*0.15*min_l, curr[1]+bis[1]*0.15*min_l, f"{ang:.1f}°",
+        ax.text(curr[0]+bis[0]*0.15*min(lengths), curr[1]+bis[1]*0.15*min(lengths), f"{ang:.1f}°",
                 color='green', ha='center', va='center', fontsize=10,
                 bbox=dict(facecolor='white', alpha=0.6, edgecolor='none'))
 
