@@ -339,7 +339,7 @@ def main():
 
     show_alt = False
     if n == 3:
-        show_alt = st.checkbox("Show altitudes (triangle only)")
+        show_alt = True
 
 
     if st.button("Draw polygon", use_container_width=True):
