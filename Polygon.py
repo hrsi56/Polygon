@@ -295,7 +295,7 @@ def draw_polygon(poly: PolygonData):
 # ────── Streamlit UI ───────────────────────────────────────────────────────
 def main():
     st.set_page_config(page_title="Polygon Drawer", layout="centered")
-    st.title("📐 Polygon Drawer – single‑reference diagonal angles")
+    st.title("📐 Polygon Drawer – לינקו בתמורה לטובות הנאה")
 
     n = st.number_input("Number of sides", 3, 12, 4, 1)
     lengths = [st.number_input(f"Length {i + 1}", 0.01, 1000.0,
