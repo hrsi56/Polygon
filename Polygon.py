@@ -218,38 +218,79 @@ if st.button("✏️ שרטוט"):
         else:
             st.markdown("⚪ למשולש אין אלכסונים.")
 
-# -------------------------------------------------
-# הוסף במקום כלשהו למעלה (ליד פונקציות העזר)
-def polygon_closes(sides, lengths, int_angles, tol=TOL):
+
+
+
+# -------------  פונקציית עזר חדשה ------------- #
+def closure_check(sides, lengths, int_angles, tol=TOL):
     """
-    החזר True אם וקטור הסכום של כל הצלעות מתאפס (המצולע נסגר).
-    משתמש באותו חישוב headings כמו draw_polygon.
+    מחזירה: (closed?, gap, suggested_last_len, suggested_last_angle or None)
     """
+    # ►‑‑‑ בניית וקטורים בדיוק כמו draw_polygon (ללא תיקון צלע חסרה) ‑‑‑►
     if int_angles:
         ext = [180 - a for a in int_angles]
         headings = np.cumsum([0] + ext[:-1])
     else:
         headings = np.cumsum([0] + [0] * (sides - 1))
 
-    dx = dy = 0.0
-    for hd, L in zip(headings, lengths):
-        rad = np.radians(hd)
-        dx += L * np.cos(rad)
-        dy += L * np.sin(rad)
+    vecs = [(L * np.cos(np.radians(hd)),
+             L * np.sin(np.radians(hd))) for hd, L in zip(headings, lengths)]
 
-    return np.hypot(dx, dy) < tol
-# -------------------------------------------------
+    pts = [(0.0, 0.0)]
+    for dx, dy in vecs:
+        x, y = pts[-1]
+        pts.append((x + dx, y + dy))
 
-# -------------------------------------------------
-# בתוך בלוק הכפתור – מיד אחרי if fig: ...
-# (כל מה שמתחת נשאר כמו שהיה)
+    gap_vec = np.array(pts[-1]) - np.array(pts[0])
+    gap = np.linalg.norm(gap_vec)
+    closed = gap < tol
+
+    # ►‑‑‑ הצעות תיקון ‑‑‑►
+    suggested_len = np.linalg.norm(np.array(pts[-2]) - np.array(pts[0]))
+    suggested_ang = None
+    if int_angles:
+        ext_needed = (360 - sum(ext[:-1])) % 360
+        suggested_ang = 180 - ext_needed
+
+    return closed, gap, suggested_len, suggested_ang
+
+
+# ----------   UI Streamlit   ---------- #
+st.set_page_config(page_title="🎯 מצולעים + אלכסונים", layout="centered")
+st.title("🎯 שרטוט מצולעים (כולל אלכסונים)")
+
+sides = st.number_input("מספר צלעות", 3, 12, 3, 1)
+length_inputs = [st.text_input(f"צלע {i + 1}") for i in range(sides)]
+lengths = [None if not L.strip() else float(L) for L in length_inputs]
+
+use_angles = st.checkbox("הזן זוויות פנימיות")
+int_angles = None
+if use_angles:
+    angle_inputs = [st.text_input(f"זווית {i + 1}") for i in range(sides)]
+    if "" in angle_inputs:
+        st.error("חובה להזין את כל הזוויות.")
+        st.stop()
+    int_angles = [float(a) for a in angle_inputs]
+
+if st.button("✏️ שרטוט"):
+    fig, final_lengths, diag_list = draw_polygon(sides, lengths, int_angles)
     if fig:
         st.pyplot(fig)
 
-        # בדיקת סגירה ✨
-        if not polygon_closes(sides, final_lengths, int_angles):
-            st.warning("⚠️ המצולע אינו נסגר עם הערכים שהוזנו.")
-
-        st.markdown("### אורכי צלעות")
-        ...
-# -------------------------------------------------
+        # ---- בדיקת סגירה ----
+        closed, gap, sugg_len, sugg_ang = closure_check(
+            sides, final_lengths, int_angles
+        )
+        if not closed:
+            st.toast(
+                f"⚠️ הצורה לא נסגרה (פער {gap:.2f}).",
+                icon="⚠️",
+            )
+            st.warning(
+                f"הצעה: שנה את **אורך הצלע האחרונה** ל‑{sugg_len:.2f}"
+                + (
+                    f" (או את **הזווית האחרונה** ל‑{sugg_ang:.1f}°)"
+                    if sugg_ang is not None
+                    else ""
+                )
+            )
