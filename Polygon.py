@@ -12,9 +12,12 @@
 # -----------------------------------------------------------
 from __future__ import annotations
 
+import datetime as dt
 import io
+import json
 import math
 import string
+import zipfile
 from dataclasses import dataclass
 from typing import List, Sequence
 
@@ -379,10 +382,10 @@ def main():
         }
 
         st.markdown("### Numerical data")
-        st.json(num_data, expanded=False)
+        st.json(num_data, expanded=True)
 
         st.markdown("### Diagonals")
-        st.json(diag_data, expanded=False)
+        st.json(diag_data, expanded=True)
 
         # prepare files ------------------------------
         ts = dt.datetime.now().strftime("%Y%m%d_%H%M")
