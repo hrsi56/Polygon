@@ -357,8 +357,16 @@ def main():
         if altitudes:
             num_data["Altitudes"] = [round(a["length"], 4)
                                      for a in altitudes]
+            st.markdown("### Numerical data")
+            st.json(num_data, expanded=True)
 
-        diag_data = {
+            txt_bytes = json.dumps(
+                {"Numerical data": num_data},
+                indent=2
+            ).encode()
+
+        else:
+            diag_data = {
             f"{poly.names[d['i']]}{poly.names[d['j']]}": {
                 "Length": round(d["length"], 3),
                 poly.names[d["i"]]: d["end_i"],
@@ -366,20 +374,22 @@ def main():
             } for d in diag_list
         }
 
-        st.markdown("### Numerical data")
-        st.json(num_data, expanded=True)
+            st.markdown("### Numerical data")
+            st.json(num_data, expanded=True)
 
-        st.markdown("### Diagonals")
-        st.json(diag_data, expanded=True)
+            st.markdown("### Diagonals")
+            st.json(diag_data, expanded=True)
+
+            txt_bytes = json.dumps(
+                {"Numerical data": num_data, "Diagonals": diag_data},
+                indent=2
+            ).encode()
 
         # -------- create ZIP download --------------------------------------
         ts = dt.datetime.now().strftime("%Y%m%d_%H%M")
         base = f"YVD_Poligon_{ts}"
 
-        txt_bytes = json.dumps(
-            {"Numerical data": num_data, "Diagonals": diag_data},
-            indent=2
-        ).encode()
+
 
         png_buf, pdf_buf, svg_buf = io.BytesIO(), io.BytesIO(), io.BytesIO()
         fig.savefig(png_buf, format="png", dpi=300, bbox_inches="tight")
