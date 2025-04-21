@@ -1,6 +1,6 @@
-# poly_draw_with_diagonals.py
+# poly_draw_with_check.py
 # -------------------------------------------------
-# Streamlit app – שרטוט מצולעים + אלכסונים וחישוב אורכם
+# Streamlit app – שרטוט מצולעים + אלכסונים + בדיקת סגירה
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 TOL = 1e-6
 
 
-# ----------   חישובי עזר   ---------- #
+# ----------   עזר: זווית פנימית   ---------- #
 def compute_internal_angle(p_prev, p_curr, p_next):
     v1 = np.array(p_prev) - np.array(p_curr)
     v2 = np.array(p_next) - np.array(p_curr)
@@ -17,18 +17,28 @@ def compute_internal_angle(p_prev, p_curr, p_next):
     return np.degrees(np.arccos(cos_t))
 
 
+# ----------   עזר: כל האלכסונים   ---------- #
 def all_diagonals(pts):
-    """החזר [(i,j,Len), ...] לכל הזוגות שאינם צלעות."""
     n = len(pts)
     diags = []
     for i in range(n):
         for j in range(i + 1, n):
-            # צלע משותפת? (i‑j צמודים במודולו n)
             if j == (i + 1) % n or (i == 0 and j == n - 1):
-                continue
+                continue                      # צלע משותפת
             length = np.linalg.norm(np.array(pts[j]) - np.array(pts[i]))
-            diags.append((i + 1, j + 1, length))  # +1 להצגה אנושית
+            diags.append((i + 1, j + 1, length))  # +1 – ספירה “אנושית”
     return diags
+
+
+# ----------   עזר: בדיקת סגירה   ---------- #
+def check_closure(pts_closed):
+    """בודק אם הנקודה האחרונה חופפת לראשונה (בתוך TOL)."""
+    if np.allclose(pts_closed[0], pts_closed[-1], atol=TOL):
+        return True, 0.0, 0.0, 0.0
+    dx = pts_closed[0][0] - pts_closed[-1][0]
+    dy = pts_closed[0][1] - pts_closed[-1][1]
+    gap = np.hypot(dx, dy)
+    return False, gap, dx, dy
 
 
 # ----------   משולש   ---------- #
@@ -36,11 +46,11 @@ def draw_triangle(lengths):
     L1, L2, L3 = lengths
     A = (0.0, 0.0)
     B = (L1, 0.0)
-    x = (L1 ** 2 + L2 ** 2 - L3 ** 2) / (2 * L1)
-    y2 = L2 ** 2 - x ** 2
+    x = (L1**2 + L2**2 - L3**2) / (2 * L1)
+    y2 = L2**2 - x**2
     if y2 < -TOL:
         st.error("לא ניתן לבנות משולש עם אורכים אלה.")
-        return None, None, None
+        return None, None, [], True
     y = np.sqrt(max(y2, 0.0))
     C = (x, y)
 
@@ -81,7 +91,7 @@ def draw_triangle(lengths):
             bbox=dict(facecolor="white", alpha=0.7),
         )
 
-    return fig, lengths, []  # משולש: אין אלכסונים
+    return fig, lengths, [], True  # משולש תמיד סגור
 
 
 # ----------   מצולע כללי   ---------- #
@@ -91,14 +101,14 @@ def draw_polygon(sides, lengths, int_angles):
 
     missing = [i for i, L in enumerate(lengths) if L is None]
 
-    # כיוונים לפי זוויות פנימיות → חיצוניות
+    # כיוונים (Headings) לפי זוויות חיצוניות
     if int_angles:
         ext = [180 - a for a in int_angles]
         headings = np.cumsum([0] + ext[:-1])
     else:
         if len(missing) != 1:
             st.error("אם לא ניתנו זוויות, יש להשאיר צלע אחת ריקה בלבד.")
-            return None, None, None
+            return None, None, None, True
         headings = np.cumsum([0] + [0] * (sides - 1))
 
     # וקטורים
@@ -110,7 +120,7 @@ def draw_polygon(sides, lengths, int_angles):
         else:
             vecs.append(None)
 
-    # השלמת צלע חסרה (אם צריך)
+    # השלמת צלע חסרה
     if missing:
         dx = sum(v[0] for v in vecs if v)
         dy = sum(v[1] for v in vecs if v)
@@ -119,13 +129,13 @@ def draw_polygon(sides, lengths, int_angles):
         lengths[i] = L
         vecs[i] = (-dx, -dy)
 
-    # נקודות – pts_closed כולל נקודת סגירה כפולה
+    # נקודות (עם סגירה כפולה)
     pts_closed = [(0, 0)]
     for dx, dy in vecs:
         x, y = pts_closed[-1]
         pts_closed.append((x + dx, y + dy))
 
-    pts_unique = pts_closed[:-1]  # ללא הכפולה
+    pts_unique = pts_closed[:-1]
     n = len(pts_unique)
 
     # ----- ציור -----
@@ -134,7 +144,7 @@ def draw_polygon(sides, lengths, int_angles):
     ax.set_aspect("equal")
     ax.axis("off")
 
-    # ציור אלכסונים
+    # אלכסונים
     diag_list = all_diagonals(pts_unique)
     for i, j, _ in diag_list:
         p1, p2 = pts_unique[i - 1], pts_unique[j - 1]
@@ -179,12 +189,29 @@ def draw_polygon(sides, lengths, int_angles):
             bbox=dict(facecolor="white", alpha=0.7),
         )
 
-    return fig, lengths, diag_list
+    # ----- בדיקת סגירה -----
+    closed, gap, dx, dy = check_closure(pts_closed)
+    if not closed:
+        # המלצות תיקון
+        last_len = lengths[-1]
+        new_len = last_len + gap
+        v_last = vecs[-1]
+        hd_last = (np.degrees(np.arctan2(v_last[1], v_last[0]))) % 360
+        hd_needed = (np.degrees(np.arctan2(-dy, -dx))) % 360
+        delta_angle = ((hd_needed - hd_last + 180) % 360) - 180
+
+        st.error(
+            f"⚠️ המצולע לא נסגר (פער {gap:.2f}).\n\n"
+            f"* אורך מומלץ לצלע האחרונה: **{new_len:.2f}** (במקום {last_len:.2f})\n"
+            f"* שינוי זווית אחרונה: **{delta_angle:+.1f}°**"
+        )
+
+    return fig, lengths, diag_list, closed
 
 
 # ----------   UI Streamlit   ---------- #
-st.set_page_config(page_title="🎯 מצולעים + אלכסונים", layout="centered")
-st.title("🎯 שרטוט מצולעים (כולל אלכסונים)")
+st.set_page_config(page_title="🎯 מצולעים + בדיקת סגירה", layout="centered")
+st.title("🎯 שרטוט מצולעים (עם אלכסונים ובדיקת סגירה)")
 
 sides = st.number_input("מספר צלעות", 3, 12, 3, 1)
 
@@ -192,7 +219,7 @@ sides = st.number_input("מספר צלעות", 3, 12, 3, 1)
 length_inputs = [st.text_input(f"צלע {i + 1}") for i in range(sides)]
 lengths = [None if not L.strip() else float(L) for L in length_inputs]
 
-# זוויות פנימיות
+# זוויות פנימיות (אופציונלי)
 use_angles = st.checkbox("הזן זוויות פנימיות")
 int_angles = None
 if use_angles:
@@ -203,7 +230,9 @@ if use_angles:
     int_angles = [float(a) for a in angle_inputs]
 
 if st.button("✏️ שרטוט"):
-    fig, final_lengths, diag_list = draw_polygon(sides, lengths, int_angles)
+    fig, final_lengths, diag_list, closed = draw_polygon(
+        sides, lengths, int_angles
+    )
     if fig:
         st.pyplot(fig)
 
@@ -215,82 +244,6 @@ if st.button("✏️ שרטוט"):
             st.markdown("### אורכי אלכסונים")
             for i, j, L in diag_list:
                 st.write(f"אלכסון {i}–{j}: {L:.2f}")
-        else:
-            st.markdown("⚪ למשולש אין אלכסונים.")
 
-
-
-
-# -------------  פונקציית עזר חדשה ------------- #
-def closure_check(sides, lengths, int_angles, tol=TOL):
-    """
-    מחזירה: (closed?, gap, suggested_last_len, suggested_last_angle or None)
-    """
-    # ►‑‑‑ בניית וקטורים בדיוק כמו draw_polygon (ללא תיקון צלע חסרה) ‑‑‑►
-    if int_angles:
-        ext = [180 - a for a in int_angles]
-        headings = np.cumsum([0] + ext[:-1])
-    else:
-        headings = np.cumsum([0] + [0] * (sides - 1))
-
-    vecs = [(L * np.cos(np.radians(hd)),
-             L * np.sin(np.radians(hd))) for hd, L in zip(headings, lengths)]
-
-    pts = [(0.0, 0.0)]
-    for dx, dy in vecs:
-        x, y = pts[-1]
-        pts.append((x + dx, y + dy))
-
-    gap_vec = np.array(pts[-1]) - np.array(pts[0])
-    gap = np.linalg.norm(gap_vec)
-    closed = gap < tol
-
-    # ►‑‑‑ הצעות תיקון ‑‑‑►
-    suggested_len = np.linalg.norm(np.array(pts[-2]) - np.array(pts[0]))
-    suggested_ang = None
-    if int_angles:
-        ext_needed = (360 - sum(ext[:-1])) % 360
-        suggested_ang = 180 - ext_needed
-
-    return closed, gap, suggested_len, suggested_ang
-
-
-# ----------   UI Streamlit   ---------- #
-st.set_page_config(page_title="🎯 מצולעים + אלכסונים", layout="centered")
-st.title("🎯 שרטוט מצולעים (כולל אלכסונים)")
-
-sides = st.number_input("מספר צלעות", 3, 12, 3, 1)
-length_inputs = [st.text_input(f"צלע {i + 1}") for i in range(sides)]
-lengths = [None if not L.strip() else float(L) for L in length_inputs]
-
-use_angles = st.checkbox("הזן זוויות פנימיות")
-int_angles = None
-if use_angles:
-    angle_inputs = [st.text_input(f"זווית {i + 1}") for i in range(sides)]
-    if "" in angle_inputs:
-        st.error("חובה להזין את כל הזוויות.")
-        st.stop()
-    int_angles = [float(a) for a in angle_inputs]
-
-if st.button("✏️ שרטוט"):
-    fig, final_lengths, diag_list = draw_polygon(sides, lengths, int_angles)
-    if fig:
-        st.pyplot(fig)
-
-        # ---- בדיקת סגירה ----
-        closed, gap, sugg_len, sugg_ang = closure_check(
-            sides, final_lengths, int_angles
-        )
-        if not closed:
-            st.toast(
-                f"⚠️ הצורה לא נסגרה (פער {gap:.2f}).",
-                icon="⚠️",
-            )
-            st.warning(
-                f"הצעה: שנה את **אורך הצלע האחרונה** ל‑{sugg_len:.2f}"
-                + (
-                    f" (או את **הזווית האחרונה** ל‑{sugg_ang:.1f}°)"
-                    if sugg_ang is not None
-                    else ""
-                )
-            )
+        if closed:
+            st.success("✅ המצולע נסגר בהצלחה!")
