@@ -26,6 +26,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
 from matplotlib.patches import Arc
+from scipy.stats import alpha
 
 TOL = 1e-6
 LABEL_SHIFT = -0.05        # outward label offset (fraction of min side)
@@ -191,7 +192,7 @@ def draw_polygon(poly: PolygonData):
     fig, ax = plt.subplots(figsize=(7, 7))
     ax.set_aspect("equal")
     ax.axis("off")
-    ax.plot(pts_closed[:, 0], pts_closed[:, 1], "-o", lw=1, color= "gray")
+    ax.plot(pts_closed[:, 0], pts_closed[:, 1], "-o", lw=1.4, color= "black" , alpha=0.8 )
 
     min_len = min(poly.lengths)
 
