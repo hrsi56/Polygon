@@ -458,3 +458,6 @@ def main():
         zip_buf.seek(0)
 
         st.download_button("Download all (ZIP)", zip_buf, f"{base}.zip", "application/zip")
+
+if __name__ == "__main__":
+    main()
