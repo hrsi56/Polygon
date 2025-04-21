@@ -1,5 +1,17 @@
 from __future__ import annotations
 
+"""
+Polygon Drawer / Open Polyline Drawer
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+• צורות סגורות (מצולעים) – חישוב אלכסונים, שטח, גבהים וכו׳  
+• צורות פתוחות – קו שבור (polyline) – כל הצלעות נתונות, הזווית בראש A מתבטלת
+
+בתיבה "צורה פתוחה" המשתמש קובע האם תחובר הצלע האחרונה לראשונה.
+
+גרסה – April 2025
+"""
+
 import datetime as dt
 import io
 import json
@@ -16,21 +28,17 @@ import streamlit as st
 TOL = 1e-6
 LABEL_SHIFT = -0.05  # outward label offset (fraction of min side)
 
-# ────── geometry helpers ──────────────────────────────────────────────────
+# ────────────────── Helpers ──────────────────────────────────────────────
 
 def vertex_names(n: int) -> List[str]:
     letters = string.ascii_uppercase
-    return [
-        (letters[i] if i < 26 else letters[i // 26 - 1] + letters[i % 26])
-        for i in range(n)
-    ]
+    return [letters[i] if i < 26 else letters[i // 26 - 1] + letters[i % 26] for i in range(n)]
 
 
 def angle_between(u: np.ndarray, v: np.ndarray) -> float:
+    """Return angle in degrees between two vectors."""
     return math.degrees(
-        math.acos(
-            np.clip(np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v)), -1, 1)
-        )
+        math.acos(np.clip(np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v)), -1, 1))
     )
 
 
@@ -43,33 +51,30 @@ def centroid(pts: np.ndarray) -> np.ndarray:
     x, y = pts[:, 0], pts[:, 1]
     a = np.dot(x, np.roll(y, -1)) - np.dot(y, np.roll(x, -1))
     A = 0.5 * a
-    cx = np.sum((x + np.roll(x, -1)) * (x * np.roll(y, -1) - np.roll(x, -1) * y)) / (
-        6 * A
-    )
-    cy = np.sum((y + np.roll(y, -1)) * (x * np.roll(y, -1) - np.roll(x, -1) * y)) / (
-        6 * A
-    )
+    cx = np.sum((x + np.roll(x, -1)) * (x * np.roll(y, -1) - np.roll(x, -1) * y)) / (6 * A)
+    cy = np.sum((y + np.roll(y, -1)) * (x * np.roll(y, -1) - np.roll(x, -1) * y)) / (6 * A)
     return np.array([cx, cy])
 
 
 def is_polygon_possible(lengths: Sequence[float]) -> bool:
+    """Basic polygon inequality – longest side shorter than sum of the rest."""
     L = sorted(lengths)
     return L[-1] < sum(L[:-1]) - 1e-9
 
 
-# ────── data structure ────────────────────────────────────────────────────
+# ────────────────── Data structure ───────────────────────────────────────
 @dataclass
 class PolygonData:
-    pts: np.ndarray
-    lengths: List[float]
-    angles_int: List[float]
+    pts: np.ndarray           # vertices in order (N×2)
+    lengths: List[float]      # side‑length list (len = n_edges)
+    angles_int: List[float]   # internal angles *per vertex* (len = len(pts)), None where not defined
 
     @property
     def names(self) -> List[str]:
         return vertex_names(len(self.pts))
 
 
-# ────── construction functions ───────────────────────────────────────────
+# ────────────────── Builders ─────────────────────────────────────────────
 
 def repaired_angles(n: int, angs: Sequence[float] | None):
     if angs is None:
@@ -77,6 +82,8 @@ def repaired_angles(n: int, angs: Sequence[float] | None):
     k = (n - 2) * 180.0 / sum(angs)
     return [a * k for a in angs]
 
+
+# -- Closed polygon -------------------------------------------------------
 
 def circumscribed_polygon(lengths: Sequence[float]) -> PolygonData:
     n = len(lengths)
@@ -88,29 +95,27 @@ def circumscribed_polygon(lengths: Sequence[float]) -> PolygonData:
 
     for _ in range(60):
         mid = 0.5 * (R_lo + R_hi)
-        if total(mid) > 2 * math.pi:
-            R_lo = mid
-        else:
-            R_hi = mid
+        (R_lo, R_hi) = (mid, R_hi) if total(mid) > 2 * math.pi else (R_lo, mid)
     R = 0.5 * (R_lo + R_hi)
 
     central = 2 * np.arcsin(L / (2 * R))
     theta = np.concatenate(([0.0], np.cumsum(central)))[:-1]
     pts = np.stack([R * np.cos(theta), R * np.sin(theta)], axis=1)
-    angles = [
-        math.degrees(math.pi - 0.5 * (central[i - 1] + central[i])) for i in range(n)
-    ]
+    angles = [math.degrees(math.pi - 0.5 * (central[i - 1] + central[i])) for i in range(n)]
     return PolygonData(pts, list(L), angles)
 
+
+# -- General closed polygon from lengths+angles --------------------------
 
 def build_polygon(lengths: Sequence[float], angles: Sequence[float]) -> PolygonData:
     n = len(lengths)
     L = np.asarray(lengths, float)
-    ext = np.radians(180.0 - np.asarray(angles))
+    ext = np.radians(180.0 - np.asarray(angles))  # external turn
     heads = np.zeros(n)
     heads[1:] = np.cumsum(ext[:-1])
     vecs = np.stack([L * np.cos(heads), L * np.sin(heads)], axis=1)
 
+    # adjust to close the gap
     gap = vecs.sum(axis=0)
     if np.hypot(*gap) > TOL:
         vecs += (-gap * (L / L.sum())[:, None])
@@ -120,94 +125,50 @@ def build_polygon(lengths: Sequence[float], angles: Sequence[float]) -> PolygonD
 
     pts = np.concatenate([[np.zeros(2)], np.cumsum(vecs, axis=0)])[:-1]
     lengths_corr = np.linalg.norm(vecs, axis=1).tolist()
-    angles_corr = [
-        angle_between(pts[i - 1] - pts[i], pts[(i + 1) % n] - pts[i]) for i in range(n)
-    ]
+    angles_corr = [angle_between(pts[i - 1] - pts[i], pts[(i + 1) % n] - pts[i]) for i in range(n)]
     return PolygonData(pts, lengths_corr, angles_corr)
 
 
-# ────── diagonals with single‑reference angle ─────────────────────────────
+# -- Open polyline (first and last vertices are free) ---------------------
 
-def diagonals_info(poly: PolygonData):
+def build_polyline(lengths: Sequence[float], angles: Sequence[float]) -> PolygonData:
+    """Build an open polyline given *segment* lengths and internal angles at all vertices
+    (angle at the first vertex is ignored when drawing, but still used for geometry).
+    The path starts at (0,0) and goes initially along the +x axis.
+    """
+    m = len(lengths)  # number of segments
+
+    # heads[i] is heading (direction) of segment i in radians
+    ext = np.radians(180.0 - np.asarray(angles))  # external turn angles
+    heads = np.zeros(m)
+    if m > 1:
+        heads[1:] = np.cumsum(ext[:-1])
+
+    L = np.asarray(lengths, float)
+    vecs = np.stack([L * np.cos(heads), L * np.sin(heads)], axis=1)
+    pts = np.concatenate([[np.zeros(2)], np.cumsum(vecs, axis=0)])  # m+1 vertices
+
+    # compute internal angles for vertices 1..m-1; 0 and m are None
+    int_angles = [None] * (m + 1)
+    for i in range(1, m):
+        int_angles[i] = angle_between(pts[i] - pts[i - 1], pts[i] - pts[i + 1])
+
+    return PolygonData(pts, list(lengths), int_angles)
+
+
+# ────────────────── Drawing ──────────────────────────────────────────────
+
+def draw_shape(poly: PolygonData, closed: bool):
+    """Draw closed polygon or open polyline."""
     pts = poly.pts
-    names = poly.names
-    n = len(pts)
-    info = []
-    for i in range(n):
-        for j in range(i + 2, n):
-            if i == 0 and j == n - 1:
-                continue
-            v = pts[j] - pts[i]
-            length = float(np.linalg.norm(v))
-
-            def pick_angle(idx: int, vec: np.ndarray):
-                # vectors of adjacent sides from vertex idx
-                prev_vec = pts[idx - 1] - pts[idx]
-                next_vec = pts[(idx + 1) % n] - pts[idx]
-                ang_prev = angle_between(vec, prev_vec)
-                ang_next = angle_between(vec, next_vec)
-                if ang_prev <= ang_next:
-                    return ang_prev, f"{names[idx - 1]}{names[idx]}"
-                else:
-                    return ang_next, f"{names[idx]}{names[(idx + 1) % n]}"
-
-            ang_i, side_i = pick_angle(i, v)
-            ang_j, side_j = pick_angle(j, -v)
-
-            info.append(
-                dict(
-                    i=i,
-                    j=j,
-                    length=length,
-                    end_i=dict(side=side_i, angle=ang_i),
-                    end_j=dict(side=side_j, angle=ang_j),
-                )
-            )
-    return info
-
-
-# ────── bounding rectangle ────────────────────────────────────────────────
-
-def bounding_rect(pts: np.ndarray):
-    xmin, ymin = pts.min(axis=0)
-    xmax, ymax = pts.max(axis=0)
-    rect = np.array([[xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax]])
-    return rect, xmax - xmin, ymax - ymin
-
-
-# ────────── triangle altitudes ────────────────────────────────────────────
-
-def triangle_altitudes(pts: np.ndarray):
-    """Return list of dicts with keys: 'from', 'to', 'foot', 'length'."""
-    alt = []
-    names = vertex_names(3)
-    for idx in range(3):
-        A = pts[idx]
-        B = pts[(idx + 1) % 3]
-        C = pts[(idx + 2) % 3]
-        BC_vec = C - B
-        t = np.dot(A - B, BC_vec) / np.dot(BC_vec, BC_vec)
-        foot = B + t * BC_vec
-        length = float(np.linalg.norm(A - foot))
-        alt.append(
-            dict(
-                from_v=idx,
-                to_side=f"{names[(idx + 1) % 3]}{names[(idx + 2) % 3]}",
-                foot=foot,
-                length=length,
-            )
-        )
-    return alt
-
-
-# ────── drawing routine ───────────────────────────────────────────────────
-
-def draw_polygon(poly: PolygonData, show_altitudes: bool, closed: bool = True):
-    n = len(poly.pts)
+    n_edges = len(poly.lengths)
     names = poly.names
 
-    # Points to plot – close the loop only if requested
-    pts_plot = np.vstack([poly.pts, poly.pts[0]]) if closed else poly.pts
+    # Build plotting array
+    if closed:
+        pts_plot = np.vstack([pts, pts[0]])
+    else:
+        pts_plot = pts
 
     fig, ax = plt.subplots(figsize=(7, 7))
     ax.set_aspect("equal")
@@ -216,53 +177,10 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool, closed: bool = True):
 
     min_len = min(poly.lengths)
 
-    # ----- diagonals -------------------------------------------------------
-    diags = []
-    if closed:
-        diags = diagonals_info(poly)
-        for d in diags:
-            p1, p2 = poly.pts[d["i"], :], poly.pts[d["j"], :]
-            ax.plot([p1[0], p2[0]], [p1[1], p2[1]], "--", lw=0.8, color="gray", alpha=0.6)
-            mid = 0.5 * (p1 + p2)
-            ax.text(
-                *mid,
-                f"{d['length']:.2f}",
-                fontsize=6,
-                color="gray",
-                ha="center",
-                va="center",
-            )
-
-            # endpoint i
-            vec_i = (p2 - p1) / np.linalg.norm(p2 - p1)
-            ax.text(
-                *(p1 + vec_i * 0.1 * min_len),
-                f"{d['end_i']['angle']:.1f}° to {d['end_i']['side']}",
-                fontsize=6,
-                color="orange",
-                ha="center",
-                va="center",
-            )
-
-            # endpoint j
-            vec_j = (p1 - p2) / np.linalg.norm(p1 - p2)
-            ax.text(
-                *(p2 + vec_j * 0.1 * min_len),
-                f"{d['end_j']['angle']:.1f}° to {d['end_j']['side']}",
-                fontsize=6,
-                color="orange",
-                ha="center",
-                va="center",
-            )
-
-    # ----- vertices & sides ------------------------------------------------
-    edge_range = range(n - 1) if not closed else range(n)
-    for i, (x, y) in enumerate(poly.pts):
-        # vertex label
-        prev_vec = poly.pts[i] - poly.pts[i - 1] if i != 0 else np.array([0.0, 0.0])
-        next_vec = (
-            poly.pts[(i + 1) % n] - poly.pts[i] if (closed or i < n - 1) else np.array([0.0, 0.0])
-        )
+    # Vertices ----------------------------------------------------------------
+    for i, (x, y) in enumerate(pts):
+        prev_vec = pts[i] - pts[i - 1] if i > 0 else np.array([0.0, 0.0])
+        next_vec = pts[i + 1] - pts[i] if (i < len(pts) - 1) else np.array([0.0, 0.0])
         normal = np.array([-(prev_vec[1] + next_vec[1]), prev_vec[0] + next_vec[0]])
         if np.linalg.norm(normal):
             normal /= np.linalg.norm(normal)
@@ -278,31 +196,40 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool, closed: bool = True):
             bbox=dict(facecolor="white", alpha=0.8, boxstyle="circle,pad=0.25"),
         )
 
-        # edge length label
-        if i in edge_range:
-            mid = 0.5 * (poly.pts[i] + poly.pts[(i + 1) % n])
-            edge = poly.pts[(i + 1) % n] - poly.pts[i]
-            edge_norm = np.array([-edge[1], edge[0]]) / np.linalg.norm(edge)
-            ax.text(
-                *(mid + edge_norm * LABEL_SHIFT * min_len),
-                f"{poly.lengths[i]:.2f}",
-                fontsize=7,
-                bbox=dict(facecolor="white", alpha=0.7, edgecolor="none"),
-                ha="center",
-                va="center",
-            )
+    # Edge length labels -------------------------------------------------------
+    edge_iter = range(n_edges)
+    for i in edge_iter:
+        p1, p2 = pts[i], pts[i + 1] if not closed else pts[(i + 1) % len(pts)]
+        mid = 0.5 * (p1 + p2)
+        edge = p2 - p1
+        edge_norm = np.array([-edge[1], edge[0]]) / np.linalg.norm(edge)
+        ax.text(
+            *(mid + edge_norm * LABEL_SHIFT * min_len),
+            f"{poly.lengths[i]:.2f}",
+            fontsize=7,
+            bbox=dict(facecolor="white", alpha=0.7, edgecolor="none"),
+            ha="center",
+            va="center",
+        )
 
-    # Internal angles ------------------------------------------------------
-    angle_range = range(n) if closed else range(1, n - 1)  # skip ends if open
+    # Internal angles ----------------------------------------------------------
+    if closed:
+        angle_range = range(len(pts))
+    else:
+        angle_range = range(1, len(pts) - 1)  # skip first vertex A, skip last vertex
+
     for i in angle_range:
-        p = poly.pts[i]
-        v_prev = poly.pts[i - 1] - p
-        v_next = poly.pts[(i + 1) % n] - p if (closed or i < n - 1) else poly.pts[i + 1] - p
+        if poly.angles_int[i] is None:
+            continue
+        p = pts[i]
+        v_prev = pts[i - 1] - p
+        v_next = pts[i + 1] - p if not closed else pts[(i + 1) % len(pts)] - p
         bis = v_prev / np.linalg.norm(v_prev) + v_next / np.linalg.norm(v_next)
-        bis = bis / np.linalg.norm(bis) if np.linalg.norm(bis) else np.array([v_next[1], -v_next[0]])
+        if not np.linalg.norm(bis):
+            bis = np.array([v_next[1], -v_next[0]])
+        else:
+            bis /= np.linalg.norm(bis)
         txt = p + bis * (0.23 * min_len)
-        start = math.degrees(math.atan2(v_prev[1], v_prev[0]))
-        end = start - (180 - poly.angles_int[i])
         ax.text(
             *txt,
             f"{poly.angles_int[i]:.1f}°",
@@ -312,37 +239,20 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool, closed: bool = True):
             va="center",
         )
 
-    # ----- area label ------------------------------------------------------
+    # Additional annotations ---------------------------------------------------
     if closed:
+        # area & bounding rectangle
+        area_val = shoelace_area(pts)
         ax.text(
-            *(centroid(poly.pts) - np.array([0, 0.05])),
-            f"Area = {shoelace_area(poly.pts):.2f}",
+            *(centroid(pts) - np.array([0, 0.05])),
+            f"Area = {area_val:.2f}",
             fontsize=9,
             color="green",
             ha="center",
             va="center",
             bbox=dict(facecolor="white", alpha=0.7, edgecolor="none"),
         )
-
-    # -------- altitudes for triangle --------------------------------------
-    altitudes_data = None
-    if show_altitudes and closed and n == 3:
-        altitudes_data = triangle_altitudes(poly.pts)
-        for alt in altitudes_data:
-            A = poly.pts[alt["from_v"]]
-            foot = alt["foot"]
-            ax.plot([A[0], foot[0]], [A[1], foot[1]], ":", color="magenta", lw=1.2)
-            ax.text(
-                *foot,
-                f"h={alt['length']:.2f}",
-                fontsize=6,
-                color="magenta",
-                ha="left",
-                va="bottom",
-            )
-
-    # ----- bounding rectangle ---------------------------------------------
-    rect, w, h = bounding_rect(poly.pts)
+    rect, w, h = bounding_rect(pts)
     rc = np.vstack([rect, rect[0]])
     ax.plot(rc[:, 0], rc[:, 1], "k-.", lw=1, alpha=0.5)
     HW = h * w
@@ -352,129 +262,104 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool, closed: bool = True):
     ax.text(*mid_h, f"h={h:.2f}", fontsize=8, ha="left", va="center")
     ax.text(*(rect[0] + 0.03), f"Area={HW:.2f}", fontsize=8, ha="left", va="center")
 
-    return fig, diags, altitudes_data
+    return fig
 
 
-# ────── Streamlit UI ───────────────────────────────────────────────────────
+# Bounding rectangle ------------------------------------------------------
+
+def bounding_rect(pts: np.ndarray):
+    xmin, ymin = pts.min(axis=0)
+    xmax, ymax = pts.max(axis=0)
+    rect = np.array([[xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax]])
+    return rect, xmax - xmin, ymax - ymin
+
+
+# ────────────────── Streamlit app ────────────────────────────────────────
 
 def main():
-    st.set_page_config(page_title="Polygon Drawer", layout="centered")
-    st.title("📐 Polygon Drawer – לינקו. בתמורה לטובות הנעה")
+    st.set_page_config(page_title="Polygon / Polyline Drawer", layout="centered")
+    st.title("📐 Polygon & Polyline Drawer – לינקו")
 
-    n = st.number_input("Number of sides", 3, 12, 4, 1)
+    n_edges = st.number_input("Number of sides / segments", min_value=3, max_value=12, value=4, step=1)
     lengths = [
-        st.number_input(f"Length {i + 1}", 0.01, 1000.0, 1.0, 0.1, key=f"L{i}")
-        for i in range(n)
+        st.number_input(f"Length {i + 1}", min_value=0.01, max_value=1000.0, value=1.0, step=0.1, key=f"L{i}")
+        for i in range(int(n_edges))
     ]
 
-    open_shape = st.checkbox("🔓 צורה פתוחה (אל תחבר את הצלע האחרונה לראשונה)", value=False)
+    open_shape = st.checkbox("🔓 צורה פתוחה (הצלע הראשונה לא תתחבר לאחרונה)")
+
+    provide_angles = st.checkbox("Provide internal angles?")
+    if provide_angles:
+        default_ang = round(180 * (n_edges - 2) / n_edges, 1)
+        angles = [
+            st.number_input(
+                f"∠ {vertex_names(int(n_edges) if not open_shape else int(n_edges) + 1)[i]}",
+                min_value=1.0,
+                max_value=359.0,
+                value=default_ang,
+                step=1.0,
+                key=f"A{i}",
+            )
+            for i in range(int(n_edges))
+        ]
+    else:
+        angles = None
 
     if not open_shape and not is_polygon_possible(lengths):
         st.error("⚠️  Side lengths violate polygon inequality.")
         st.stop()
 
-    if st.checkbox("Provide internal angles?"):
-        angs = [
-            st.number_input(
-                f"∠ {vertex_names(n)[i]}",
-                1.0,
-                360.0,
-                round(180 * (n - 2) / n, 1),
-                1.0,
-                key=f"A{i}",
-            )
-            for i in range(n)
-        ]
-        poly = build_polygon(lengths, repaired_angles(n, angs))
+    # ـــ Build geometry ـــ
+    poly: PolygonData | None = None
+    if open_shape:
+        if angles is None:
+            st.error("For an open shape you must supply the angles, otherwise אין מספיק מידע לשרטט.")
+            st.stop()
+        poly = build_polyline(lengths, angles)
     else:
-        poly = circumscribed_polygon(lengths)
+        if angles is None:
+            poly = circumscribed_polygon(lengths)
+        else:
+            poly = build_polygon(lengths, repaired_angles(len(lengths), angles))
 
-    show_alt = False
-    if n == 3 and not open_shape:
-        show_alt = True
-
-    if st.button("Draw polygon", use_container_width=True):
-        fig, diag_list, altitudes = draw_polygon(poly, show_alt, closed=not open_shape)
+    # Draw button -------------------------------------------------------------
+    if st.button("Draw", type="primary"):
+        fig = draw_shape(poly, closed=not open_shape)
         st.pyplot(fig, use_container_width=True)
 
-        if open_shape:
-            st.info("הצורה פתוחה – אין שטח, אלכסונים או גבהים לחישוב.")
-        else:
-            area_val = shoelace_area(poly.pts)
-            _, w, h = bounding_rect(poly.pts)
-
-            num_data = {
-                "Area": round(area_val, 4),
-                "Bounding width": round(w, 4),
-                "Bounding height": round(h, 4),
-            }
-            if altitudes:
-                num_data["Altitudes"] = [round(a["length"], 4) for a in altitudes]
-
+        # --- Output numerical data ------------------------------------------
+        rect, w, h = bounding_rect(poly.pts)
+        num_data = {"Bounding width": round(w, 4), "Bounding height": round(h, 4)}
+        if not open_shape:
+            num_data["Area"] = round(shoelace_area(poly.pts), 4)
             st.markdown("### Numerical data")
             st.json(num_data, expanded=True)
+        else:
+            st.info("הצורה פתוחה – אין שטח או אלכסונים לחשב.")
+            st.markdown("### Bounding box")
+            st.json(num_data, expanded=True)
 
-            diag_data = {
-                f"{poly.names[d['i']]}{poly.names[d['j']]}": {
-                    "Length": round(d["length"], 3),
-                    poly.names[d["i"]]: d["end_i"],
-                    poly.names[d["j"]]: d["end_j"],
-                }
-                for d in diag_list
-            }
+        # --- Download ZIP ----------------------------------------------------
+        ts = dt.datetime.now().strftime("%Y%m%d_%H%M")
+        base = f"YVD_{'OpenShape' if open_shape else 'Polygon'}_{ts}"
 
-            st.markdown("### Diagonals")
-            st.json(diag_data, expanded=True)
+        png_buf, pdf_buf, svg_buf = io.BytesIO(), io.BytesIO(), io.BytesIO()
+        fig.savefig(png_buf, format="png", dpi=300, bbox_inches="tight")
+        fig.savefig(pdf_buf, format="pdf", bbox_inches="tight")
+        fig.savefig(svg_buf, format="svg", bbox_inches="tight")
+        png_buf.seek(0), pdf_buf.seek(0), svg_buf.seek(0)
 
-            txt_bytes = json.dumps(
-                {"Numerical data": num_data, "Diagonals": diag_data}, indent=2
-            ).encode()
-
-            # -------- create ZIP download --------------------------------------
-            ts = dt.datetime.now().strftime("%Y%m%d_%H%M")
-            base = f"YVD_Poligon_{ts}"
-
-            png_buf, pdf_buf, svg_buf = io.BytesIO(), io.BytesIO(), io.BytesIO()
-            fig.savefig(png_buf, format="png", dpi=300, bbox_inches="tight")
-            fig.savefig(pdf_buf, format="pdf", bbox_inches="tight")
-            fig.savefig(svg_buf, format="svg", bbox_inches="tight")
-            png_buf.seek(0)
-            pdf_buf.seek(0)
-            svg_buf.seek(0)
-
-            zip_buf = io.BytesIO()
-            with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zip_buf = io.BytesIO()
+        with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            if not open_shape:
+                txt_bytes = json.dumps({"Numerical data": num_data}, indent=2).encode()
                 zf.writestr(f"{base}.txt", txt_bytes)
-                zf.writestr(f"{base}.png", png_buf.getvalue())
-                zf.writestr(f"{base}.pdf", pdf_buf.getvalue())
-                zf.writestr(f"{base}.svg", svg_buf.getvalue())
-            zip_buf.seek(0)
+            zf.writestr(f"{base}.png", png_buf.getvalue())
+            zf.writestr(f"{base}.pdf", pdf_buf.getvalue())
+            zf.writestr(f"{base}.svg", svg_buf.getvalue())
+        zip_buf.seek(0)
 
-            st.download_button(
-                "Download all (ZIP)", zip_buf, f"{base}.zip", "application/zip"
-            )
-        # If open shape – still offer image downloads without numerical data
-        if open_shape:
-            ts = dt.datetime.now().strftime("%Y%m%d_%H%M")
-            base = f"YVD_OpenShape_{ts}"
-            png_buf, pdf_buf, svg_buf = io.BytesIO(), io.BytesIO(), io.BytesIO()
-            fig.savefig(png_buf, format="png", dpi=300, bbox_inches="tight")
-            fig.savefig(pdf_buf, format="pdf", bbox_inches="tight")
-            fig.savefig(svg_buf, format="svg", bbox_inches="tight")
-            png_buf.seek(0)
-            pdf_buf.seek(0)
-            svg_buf.seek(0)
-
-            zip_buf = io.BytesIO()
-            with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
-                zf.writestr(f"{base}.png", png_buf.getvalue())
-                zf.writestr(f"{base}.pdf", pdf_buf.getvalue())
-                zf.writestr(f"{base}.svg", svg_buf.getvalue())
-            zip_buf.seek(0)
-
-            st.download_button(
-                "Download image files (ZIP)", zip_buf, f"{base}.zip", "application/zip"
-            )
+        st.download_button("Download all (ZIP)", zip_buf, f"{base}.zip", "application/zip")
 
 
 if __name__ == "__main__":
