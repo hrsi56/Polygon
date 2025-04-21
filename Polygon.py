@@ -282,7 +282,7 @@ def draw_polygon(poly: PolygonData):
     # Area at centroid ---------------------------------------------------------
     area_val = shoelace_area(poly.pts)
     ax.text(
-        *centroid(poly.pts),
+        *(centroid(poly.pts)-[0,0.05]),
         f"Area = {area_val:.2f}",
         fontsize=9,
         color="green",
