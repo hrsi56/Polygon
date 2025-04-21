@@ -1,5 +1,6 @@
-# poly_draw_close_fix.py
+# poly_draw_with_diagonals.py
 # -------------------------------------------------
+# Streamlit app – שרטוט מצולעים + אלכסונים וחישוב אורכם
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,7 +8,7 @@ import matplotlib.pyplot as plt
 TOL = 1e-6
 
 
-# ----------   עזר   ---------- #
+# ----------   חישובי עזר   ---------- #
 def compute_internal_angle(p_prev, p_curr, p_next):
     v1 = np.array(p_prev) - np.array(p_curr)
     v2 = np.array(p_next) - np.array(p_curr)
@@ -17,147 +18,192 @@ def compute_internal_angle(p_prev, p_curr, p_next):
 
 
 def all_diagonals(pts):
+    """החזר [(i,j,Len), ...] לכל הזוגות שאינם צלעות."""
     n = len(pts)
-    out = []
+    diags = []
     for i in range(n):
         for j in range(i + 1, n):
+            # צלע משותפת? (i‑j צמודים במודולו n)
             if j == (i + 1) % n or (i == 0 and j == n - 1):
-                continue          # זו צלע, לא אלכסון
-            out.append((i + 1, j + 1,
-                        np.linalg.norm(np.array(pts[i]) - np.array(pts[j]))))
-    return out
+                continue
+            length = np.linalg.norm(np.array(pts[j]) - np.array(pts[i]))
+            diags.append((i + 1, j + 1, length))  # +1 להצגה אנושית
+    return diags
 
 
-# ----------   מצולע   ---------- #
-def draw_polygon(sides, lengths, int_angles, auto_fix):
-    # -------------------------------------------------
-    # 1. כיוונים (headings)
+# ----------   משולש   ---------- #
+def draw_triangle(lengths):
+    L1, L2, L3 = lengths
+    A = (0.0, 0.0)
+    B = (L1, 0.0)
+    x = (L1 ** 2 + L2 ** 2 - L3 ** 2) / (2 * L1)
+    y2 = L2 ** 2 - x ** 2
+    if y2 < -TOL:
+        st.error("לא ניתן לבנות משולש עם אורכים אלה.")
+        return None, None, None
+    y = np.sqrt(max(y2, 0.0))
+    C = (x, y)
+
+    pts = [A, B, C]
+    fig, ax = plt.subplots(figsize=(5, 5))
+    ax.plot(*zip(*pts, pts[0]), "-o")
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    # תוויות צלעות
+    for i, (p1, p2) in enumerate([(A, B), (B, C), (C, A)]):
+        mx, my = (p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2
+        ax.text(
+            mx,
+            my,
+            f"{lengths[i]:.2f}",
+            color="blue",
+            fontsize=10,
+            ha="center",
+            va="center",
+            bbox=dict(facecolor="white", alpha=0.7),
+        )
+
+    # תוויות זוויות
+    for i, curr in enumerate(pts):
+        prev, nxt = pts[i - 1], pts[(i + 1) % 3]
+        ang = compute_internal_angle(prev, curr, nxt)
+        bis = (np.array(prev) - np.array(curr)) + (np.array(nxt) - np.array(curr))
+        bis /= np.linalg.norm(bis)
+        ax.text(
+            curr[0] + bis[0] * 0.1 * min(lengths),
+            curr[1] + bis[1] * 0.1 * min(lengths),
+            f"{ang:.1f}°",
+            color="green",
+            fontsize=10,
+            ha="center",
+            va="center",
+            bbox=dict(facecolor="white", alpha=0.7),
+        )
+
+    return fig, lengths, []  # משולש: אין אלכסונים
+
+
+# ----------   מצולע כללי   ---------- #
+def draw_polygon(sides, lengths, int_angles):
+    if sides == 3 and all(L is not None for L in lengths) and int_angles is None:
+        return draw_triangle(lengths)
+
+    missing = [i for i, L in enumerate(lengths) if L is None]
+
+    # כיוונים לפי זוויות פנימיות → חיצוניות
     if int_angles:
         ext = [180 - a for a in int_angles]
         headings = np.cumsum([0] + ext[:-1])
     else:
-        # ללא זוויות – חייבת להיות צלע אחת חסרה או Auto‑fix
-        missing = [i for i, L in enumerate(lengths) if L is None]
-        if not missing and not auto_fix:
-            st.error("ללא זוויות יש להשאיר צלע אחת ריקה **או** לסמן 'סגירה אוטומטית'.")
+        if len(missing) != 1:
+            st.error("אם לא ניתנו זוויות, יש להשאיר צלע אחת ריקה בלבד.")
             return None, None, None
         headings = np.cumsum([0] + [0] * (sides - 1))
 
-    # -------------------------------------------------
-    # 2. וקטורים ראשוניים
+    # וקטורים
     vecs = []
     for hd, L in zip(headings, lengths):
-        if L is None:
-            vecs.append(None)
-        else:
+        if L is not None:
             rad = np.radians(hd)
             vecs.append((L * np.cos(rad), L * np.sin(rad)))
+        else:
+            vecs.append(None)
 
-    # -------------------------------------------------
-    # 3. צלע חסרה → משלים לסגירה
-    if None in vecs:
-        i_missing = vecs.index(None)
+    # השלמת צלע חסרה (אם צריך)
+    if missing:
         dx = sum(v[0] for v in vecs if v)
         dy = sum(v[1] for v in vecs if v)
-        vecs[i_missing] = (-dx, -dy)
-        lengths[i_missing] = np.hypot(dx, dy)
+        L = np.hypot(dx, dy)
+        i = missing[0]
+        lengths[i] = L
+        vecs[i] = (-dx, -dy)
 
-    # -------------------------------------------------
-    # 4. בניית נקודות
-    pts = [(0, 0)]
-    for vx, vy in vecs:
-        x, y = pts[-1]
-        pts.append((x + vx, y + vy))
+    # נקודות – pts_closed כולל נקודת סגירה כפולה
+    pts_closed = [(0, 0)]
+    for dx, dy in vecs:
+        x, y = pts_closed[-1]
+        pts_closed.append((x + dx, y + dy))
 
-    # -------------------------------------------------
-    # 5. בדיקת סגירה
-    gap = np.linalg.norm(np.array(pts[-1]) - np.array(pts[0]))
-    if gap > TOL:
-        if auto_fix:
-            # מזיזים את **הצלע האחרונה** כדי לסגור
-            vx, vy = vecs[-1]
-            vx -= (pts[-1][0] - pts[0][0])
-            vy -= (pts[-1][1] - pts[0][1])
-            vecs[-1] = (vx, vy)
-            lengths[-1] = np.hypot(vx, vy)
+    pts_unique = pts_closed[:-1]  # ללא הכפולה
+    n = len(pts_unique)
 
-            # בונים נקודות מחדש
-            pts = [(0, 0)]
-            for vx, vy in vecs:
-                x, y = pts[-1]
-                pts.append((x + vx, y + vy))
-            gap = 0.0
-        else:
-            st.error(f"המצולע לא נסגר: סטייה {gap:.3f}. "
-                     "סמן 'סגירה אוטומטית' או תקן את הקלט.")
-            return None, None, None
-
-    # pts_closed לציור
-    pts_closed = pts + [pts[0]]
-    pts_u = pts  # ללא כפולה
-    n = len(pts_u)
-
-    # -------------------------------------------------
-    # 6. ציור
+    # ----- ציור -----
     fig, ax = plt.subplots(figsize=(6, 6))
     ax.plot(*zip(*pts_closed), "-o", lw=2)
     ax.set_aspect("equal")
     ax.axis("off")
 
-    # אלכסונים
-    if sides >= 4:
-        for i, j, _ in all_diagonals(pts_u):
-            p1, p2 = pts_u[i - 1], pts_u[j - 1]
-            ax.plot([p1[0], p2[0]], [p1[1], p2[1]],
-                    "--", lw=1, color="gray", alpha=0.6)
+    # ציור אלכסונים
+    diag_list = all_diagonals(pts_unique)
+    for i, j, _ in diag_list:
+        p1, p2 = pts_unique[i - 1], pts_unique[j - 1]
+        ax.plot(
+            [p1[0], p2[0]],
+            [p1[1], p2[1]],
+            "--",
+            lw=1,
+            color="gray",
+            alpha=0.6,
+        )
 
-    # תוויות צלע
+    # תוויות צלעות
     for i in range(sides):
         p1, p2 = pts_closed[i], pts_closed[i + 1]
         mx, my = (p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2
-        ax.text(mx, my, f"{lengths[i]:.2f}",
-                fontsize=9, color="blue",
-                ha="center", va="center",
-                bbox=dict(facecolor="white", alpha=0.7))
+        ax.text(
+            mx,
+            my,
+            f"{lengths[i]:.2f}",
+            fontsize=9,
+            color="blue",
+            ha="center",
+            va="center",
+            bbox=dict(facecolor="white", alpha=0.7),
+        )
 
-    # תוויות זווית
+    # תוויות זוויות
     for i in range(n):
-        prev, curr, nxt = pts_u[i - 1], pts_u[i], pts_u[(i + 1) % n]
+        prev, curr, nxt = pts_unique[i - 1], pts_unique[i], pts_unique[(i + 1) % n]
         ang = compute_internal_angle(prev, curr, nxt)
         bis = (np.array(prev) - np.array(curr)) + (np.array(nxt) - np.array(curr))
         bis /= np.linalg.norm(bis)
-        ax.text(curr[0] + bis[0] * 0.1 * min(lengths),
-                curr[1] + bis[1] * 0.1 * min(lengths),
-                f"{ang:.1f}°",
-                fontsize=9, color="green",
-                ha="center", va="center",
-                bbox=dict(facecolor="white", alpha=0.7))
+        ax.text(
+            curr[0] + bis[0] * 0.1 * min(lengths),
+            curr[1] + bis[1] * 0.1 * min(lengths),
+            f"{ang:.1f}°",
+            fontsize=9,
+            color="green",
+            ha="center",
+            va="center",
+            bbox=dict(facecolor="white", alpha=0.7),
+        )
 
-    return fig, lengths, all_diagonals(pts_u)
+    return fig, lengths, diag_list
 
 
-# ----------   UI   ---------- #
-st.set_page_config(page_title="🎯 מצולעים – סגירה אוטומטית", layout="centered")
-st.title("🎯 שרטוט מצולעים – כולל סגירה אוטומטית ואלכסונים")
+# ----------   UI Streamlit   ---------- #
+st.set_page_config(page_title="🎯 מצולעים + אלכסונים", layout="centered")
+st.title("🎯 שרטוט מצולעים (כולל אלכסונים)")
 
-sides = st.number_input("מספר צלעות", 3, 12, 4, 1)
+sides = st.number_input("מספר צלעות", 3, 12, 3, 1)
 
+# צלעות
 length_inputs = [st.text_input(f"צלע {i + 1}") for i in range(sides)]
-lengths = [None if not s.strip() else float(s) for s in length_inputs]
+lengths = [None if not L.strip() else float(L) for L in length_inputs]
 
+# זוויות פנימיות
 use_angles = st.checkbox("הזן זוויות פנימיות")
-angles = None
+int_angles = None
 if use_angles:
-    a_inp = [st.text_input(f"זווית {i + 1}") for i in range(sides)]
-    if "" in a_inp:
-        st.error("יש למלא את כל הזוויות.")
+    angle_inputs = [st.text_input(f"זווית {i + 1}") for i in range(sides)]
+    if "" in angle_inputs:
+        st.error("חובה להזין את כל הזוויות.")
         st.stop()
-    angles = [float(a) for a in a_inp]
-
-auto_fix = st.checkbox("סגירה אוטומטית (התאם צלע אחרונה)")
+    int_angles = [float(a) for a in angle_inputs]
 
 if st.button("✏️ שרטוט"):
-    fig, final_lengths, diag = draw_polygon(sides, lengths, angles, auto_fix)
+    fig, final_lengths, diag_list = draw_polygon(sides, lengths, int_angles)
     if fig:
         st.pyplot(fig)
 
@@ -165,7 +211,9 @@ if st.button("✏️ שרטוט"):
         for i, L in enumerate(final_lengths, 1):
             st.write(f"צלע {i}: {L:.2f}")
 
-        if diag:
+        if diag_list:
             st.markdown("### אורכי אלכסונים")
-            for i, j, L in diag:
+            for i, j, L in diag_list:
                 st.write(f"אלכסון {i}–{j}: {L:.2f}")
+        else:
+            st.markdown("⚪ למשולש אין אלכסונים.")
