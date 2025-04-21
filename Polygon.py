@@ -196,6 +196,7 @@ def draw_polygon(poly: PolygonData):
 
     min_len = min(poly.lengths)
 
+
     # ----- diagonals -------------------------------------------------------
     diags = diagonals_info(poly)
     for d in diags:
