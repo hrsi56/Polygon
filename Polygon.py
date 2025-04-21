@@ -256,7 +256,7 @@ def draw_polygon(poly: PolygonData):
         bis = bis / np.linalg.norm(bis) if np.linalg.norm(bis) else np.array(
             [v_next[1], -v_next[0]]
         )
-        txt = p + bis * (0.2 * min_len)
+        txt = p + bis * (0.23 * min_len)
         start = math.degrees(math.atan2(v_prev[1], v_prev[0]))
         end = start - (180 - poly.angles_int[i])
         ax.add_patch(
