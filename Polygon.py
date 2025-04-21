@@ -99,7 +99,7 @@ def repaired_angles(n: int, angs: Sequence[float] | None):
     if angs is None:
         return None
     k = (n - 2) * 180.0 / sum(angs)
-    return [angs]
+    return [a * k for a in angs]
 
 
 def circumscribed_polygon(lengths: Sequence[float]) -> PolygonData:
@@ -364,7 +364,7 @@ def main():
         add_extra = st.checkbox("אל תתקן את הנתונים. תסגור את הצורה כמו שנתתי לך ")
         if add_extra:
             poly = build_polygon_with_extra(lengths,
-                                            repaired_angles(n, angs))
+                                            angs)
         else:
             poly = build_polygon(lengths,
                                  repaired_angles(n, angs))
