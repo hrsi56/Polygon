@@ -286,7 +286,7 @@ def draw_polygon(poly: PolygonData):
             ha="center", va="bottom")
     ax.text(*mid_h, f"h={h:.2f}", fontsize=8,
             ha="left", va="center")
-    ax.text(*[0,0], f"Area={(h*w):.2f}", fontsize=8,
+    ax.text(*[0,0], f"Area={h:.2f * w:.2f}", fontsize=8,
             ha="left", va="center")
 
     return fig, diags
