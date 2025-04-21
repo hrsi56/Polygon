@@ -5,7 +5,7 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 
-TOL = 1e-6  # סף לטולרנס חישובי
+TOL = 1e-2  # סף לטולרנס חישובי
 
 
 # ----------   פונקציות עזר   ---------- #
