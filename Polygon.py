@@ -279,14 +279,14 @@ def draw_polygon(poly: PolygonData):
     rect, w, h = bounding_rect(poly.pts)
     rc = np.vstack([rect, rect[0]])
     ax.plot(rc[:, 0], rc[:, 1], "k-.", lw=1, alpha=0.5)
-
+    HW = h*w
     mid_w = 0.5 * (rect[0] + rect[1]) - np.array([0.1, 0.05])
     mid_h = 0.5 * (rect[1] + rect[2]) + np.array([0.01, 0.05])
     ax.text(*mid_w, f"w={w:.2f}", fontsize=8,
             ha="center", va="bottom")
     ax.text(*mid_h, f"h={h:.2f}", fontsize=8,
             ha="left", va="center")
-    ax.text(*[0,0], f"Area={h:.2f * w:.2f}", fontsize=8,
+    ax.text(*(rect[0]+0.03), f"Area={HW:.2f}", fontsize=8,
             ha="left", va="center")
 
     return fig, diags
