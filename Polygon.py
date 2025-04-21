@@ -25,6 +25,35 @@ def vertex_names(n: int) -> List[str]:
             for i in range(n)]
 
 
+def build_polygon_with_extra(lengths: Sequence[float],
+                             angles: Sequence[float]) -> PolygonData:
+    """
+    כמו build_polygon, אבל אם נשאר gap ‑ מוסיפים צלע חדשה במקום
+    לחלק את התיקון בין הצלעות הקיימות.
+    """
+    n = len(lengths)
+    L = np.asarray(lengths, float)
+
+    # כיווני הצלעות עפ"י הזוויות החיצוניות
+    ext = np.radians(180.0 - np.asarray(angles))
+    heads = np.zeros(n)
+    heads[1:] = np.cumsum(ext[:-1])
+    vecs = np.stack([L * np.cos(heads), L * np.sin(heads)], axis=1)
+
+    # ‑‑‑‑‑‑‑‑‑‑ gap -----------------------------------------------------
+    gap = vecs.sum(axis=0)
+    if np.hypot(*gap) > TOL:            # אם אכן נשאר פער
+        vecs = np.vstack([vecs, -gap])  # מוסיפים צלע סוגרת
+
+    # וֶרְטִיקְסִים וליסטים ממוזערים
+    pts = np.concatenate([[np.zeros(2)],
+                          np.cumsum(vecs, axis=0)])[:-1]
+    lengths_corr = np.linalg.norm(vecs, axis=1).tolist()
+    angles_corr = [angle_between(pts[i - 1] - pts[i],
+                                 pts[(i + 1) % len(pts)] - pts[i])
+                   for i in range(len(pts))]
+    return PolygonData(pts, lengths_corr, angles_corr)
+
 def angle_between(u: np.ndarray, v: np.ndarray) -> float:
     return math.degrees(
         math.acos(np.clip(np.dot(u, v) /
@@ -332,7 +361,13 @@ def main():
             f"∠ {vertex_names(n)[i]}", 1.0, 360.0,
             round(180 * (n - 2) / n, 1), 1.0, key=f"A{i}"
         ) for i in range(n)]
-        poly = build_polygon(lengths, repaired_angles(n, angs))
+        add_extra = st.checkbox("➕ הוסף צלע לסגירה אוטומטית")
+        if add_extra:
+            poly = build_polygon_with_extra(lengths,
+                                            repaired_angles(n, angs))
+        else:
+            poly = build_polygon(lengths,
+                                 repaired_angles(n, angs))
     else:
         poly = circumscribed_polygon(lengths)
 
