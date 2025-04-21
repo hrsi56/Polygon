@@ -105,7 +105,7 @@ def draw_polygon(sides, lengths, int_angles):
 st.title("🎯 שרטוט מצולעים מתוקן")
 
 sides = st.number_input("מספר צלעות", 3, 12, 3, 1)
-lengths = [st.text_input(f"צלע {i+1}") for i in range(sides)]
+lengths = [st.text_input(f"צלע {i}") for i in range(sides)]
 lengths = [None if not L.strip() else float(L) for L in lengths]
 
 use_angles = st.checkbox("הזן זוויות פנימיות")
