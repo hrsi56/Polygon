@@ -223,13 +223,13 @@ def triangle_altitudes(pts: np.ndarray):
 def draw_polygon(poly: PolygonData, show_altitudes: bool):
     rect, w, h = bounding_rect(poly.pts)
     img = mpimg.imread('Subject.PNG')  # or use plt.imread()
+    fig, ax = plt.subplots(figsize=(7, 7))
     ax.imshow(img, extent=[rect[0][0], rect[1][0], rect[3][1], rect[2][1]],alpha= 0.15)
 
     n = len(poly.pts)
     names = poly.names
     pts_closed = np.vstack([poly.pts, poly.pts[0]])
 
-    fig, ax = plt.subplots(figsize=(7, 7))
     ax.set_aspect("equal")
     ax.axis("off")
     ax.plot(pts_closed[:, 0], pts_closed[:, 1], "-o", lw=1.4, color= "green" , alpha=0.6 )
