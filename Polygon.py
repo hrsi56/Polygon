@@ -304,14 +304,6 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
         )
 
 
-    # ----- area label ------------------------------------------------------
-    ax.text(*(centroid(poly.pts) - np.array([0, 0.05])),
-            f"Area = {shoelace_area(poly.pts):.2f}",
-            fontsize=9, color="green",
-            ha="center", va="center",
-            bbox=dict(facecolor="white", alpha=0.7,
-                      edgecolor="none"))
-
 
 
     # -------- altitudes for triangle --------------------------------------
@@ -337,11 +329,19 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
             ha="center", va="bottom")
     ax.text(*mid_h, f"h={h:.2f}", fontsize=8,
             ha="left", va="center")
-    ax.text(*(rect[0]-0.1), f"Area={HW:.2f}", fontsize=8,
+    ax.text(*(rect[0]-0.2), f"Area REC={HW:.2f}", fontsize=8,
             ha="left", va="center")
 
     return fig, diags, altitudes_data
 
+
+    # ----- area label ------------------------------------------------------
+    ax.text(*(rect[0]-0.1),
+            f"Area Poligon = {shoelace_area(poly.pts):.2f}",
+            fontsize=9, color="green",
+            ha="center", va="center",
+            bbox=dict(facecolor="white", alpha=0.7,
+                      edgecolor="none"))
 
 # ────── Streamlit UI ───────────────────────────────────────────────────────
 def main():
