@@ -359,14 +359,14 @@ def main():
     if st.checkbox("Provide internal angles?"):
         angs = [
             st.number_input(
-                f"∠ {vertex_names(n)[(i + 1) % n]} , {i + 1}∠{(i + 2) % n}",
+                f"∠ {vertex_names(n)[(i) % n]} , {i}∠{(i + 1) % n}",
                 min_value=1.0,
                 max_value=360.0,
                 value=round(180 * (n - 2) / n, 1),
                 step=1.0,
-                key=f"A{i + 1}"
+                key=f"A{i }"
             )
-            for i in range(n)
+            for i in range(1,n+1)
         ]
         add_extra = st.checkbox("אל תתקן את הנתונים. תסגור את הצורה כמו שנתתי לך ")
         if add_extra:
