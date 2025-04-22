@@ -323,19 +323,18 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     rc = np.vstack([rect, rect[0]])
     ax.plot(rc[:, 0], rc[:, 1], "k-.", lw=1, alpha=0.5)
     HW = h*w
-    mid_w = 0.5 * (rect[0] + rect[1]) - [0.1, 0.05]
-    mid_h = 0.5 * (rect[1] + rect[2]) + [0.05, 0.1]
-    ax.text(*(rect[0]-[0,0.25]), f"w={w:.2f}", fontsize=8,
+
+    ax.text(*(rect[0]-[0,0.25] * (rect[0] + rect[1])), f"w={w:.2f}", fontsize=8,
             ha="left", va="center")
-    ax.text(*(rect[0]-[0,0.3]), f"h={h:.2f}", fontsize=8,
+    ax.text(*(rect[0]-[0,0.3] * (rect[0] + rect[1])), f"h={h:.2f}", fontsize=8,
             ha="left", va="center")
-    ax.text(*(rect[0]-[0,0.2]), f"Area REC={HW:.2f}", fontsize=8,
+    ax.text(*(rect[0]-[0,0.2] * (rect[0] + rect[1])), f"Area REC={HW:.2f}", fontsize=8,
             ha="left", va="center")
 
 
 
     # ----- area label ------------------------------------------------------
-    ax.text(*(rect[0]-[0,0.1]),
+    ax.text(*(rect[0]-[0,0.1] * (rect[0] + rect[1]) ),
             f"Area Poligon = {shoelace_area(poly.pts):.2f}",
             fontsize=9, color="green",
             ha="left", va="center",
