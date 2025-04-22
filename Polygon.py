@@ -228,7 +228,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     fig, ax = plt.subplots(figsize=(7, 7))
     ax.set_aspect("equal")
     ax.axis("off")
-    ax.plot(pts_closed[:, 0], pts_closed[:, 1], "-o", lw=1.4, color= "black" , alpha=0.6 )
+    ax.plot(pts_closed[:, 0], pts_closed[:, 1], "-o", lw=1.4, color= "green" , alpha=0.6 )
 
     min_len = min(poly.lengths)
 
@@ -278,7 +278,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
         edge_norm = np.array([-edge[1], edge[0]]) / np.linalg.norm(edge)
         ax.text(*(mid + edge_norm * LABEL_SHIFT * min_len),
                 f"{poly.lengths[i]:.2f}", fontsize=7,
-                bbox=dict(facecolor="green", alpha=0.3,
+                bbox=dict(facecolor="green", alpha=0.15,
                           edgecolor="none"),
                 ha="center", va="center")
 
