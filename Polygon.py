@@ -343,7 +343,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
 
 
     img = mpimg.imread('Subject.PNG')  # or use plt.imread()
-    ax.text(*(rect[1] - [0,0.1] * (rect[3])  ),"Created by:\nYarden Viktor Dejorno",fontsize=9,
+    ax.text(*(rect[1] - [0,0.1] * (rect[3]) -  [0.4,0] * (rect[1])),"Created by:\nYarden Viktor Dejorno",fontsize=9,
                 ha="left", va="center")
 
 
