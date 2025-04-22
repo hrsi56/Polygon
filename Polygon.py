@@ -337,7 +337,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
             ha="center", va="bottom")
     ax.text(*mid_h, f"h={h:.2f}", fontsize=8,
             ha="left", va="center")
-    ax.text(*(rect[0]+0.03), f"Area={HW:.2f}", fontsize=8,
+    ax.text(*(rect[0]-0.1), f"Area={HW:.2f}", fontsize=8,
             ha="left", va="center")
 
     return fig, diags, altitudes_data
