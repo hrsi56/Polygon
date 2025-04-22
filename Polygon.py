@@ -345,7 +345,8 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
 
     img = mpimg.imread('Subject.PNG')  # or use plt.imread()
     ax.imshow(*(rect[0]-[0.5,0.1] * (rect[3]+rect[1]) ),img)
-
+    ax.text(*(rect[0]-[0.7,0.1] * (rect[3]+rect[1]) ),"Created by:\nYarden Viktor Dejorno",fontsize=9,
+                ha="left", va="center")
 # ────── Streamlit UI ───────────────────────────────────────────────────────
 def main():
     st.set_page_config(page_title="Polygon Drawer", layout="centered")
