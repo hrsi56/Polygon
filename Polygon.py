@@ -330,17 +330,17 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     ax.text(*mid_h, f"h={h:.2f}", fontsize=8,
             ha="left", va="center")
     ax.text(*(rect[0]-[0,0.2]), f"Area REC={HW:.2f}", fontsize=8,
-            ha="left", va="left")
+            ha="left", va="center")
+
 
 
     # ----- area label ------------------------------------------------------
     ax.text(*(rect[0]-[0,0.1]),
             f"Area Poligon = {shoelace_area(poly.pts):.2f}",
             fontsize=9, color="green",
-            ha="left", va="left",
+            ha="left", va="center",
             bbox=dict(facecolor="white", alpha=0.7,
                       edgecolor="none"))
-
     return fig, diags, altitudes_data
 
 # ────── Streamlit UI ───────────────────────────────────────────────────────
