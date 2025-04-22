@@ -247,14 +247,14 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
         vec_i = (p2 - p1) / np.linalg.norm(p2 - p1)
         label_vec_i = vec_i
         ax.text(*(p1 + label_vec_i * 0.1 * min_len),
-                f"{d['end_i']['angle']:.1f}°",
+                f"{d['end_i']['angle']:.1f}°/n{d['end_i']['side']}",
                 fontsize=6, color="orange",
                 ha="center", va="center")
 
         # endpoint j
         vec_j = (p1 - p2) / np.linalg.norm(p1 - p2)
         ax.text(*(p2 + vec_j * 0.1 * min_len),
-                f"{d['end_j']['angle']:.1f}°",
+                f"{d['end_j']['angle']:.1f}°/n{d['end_j']['side']}",
                 fontsize=6, color="orange",
                 ha="center", va="center")
 
