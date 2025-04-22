@@ -224,7 +224,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     rect, w, h = bounding_rect(poly.pts)
     img = mpimg.imread('Subject.PNG')  # or use plt.imread()
     fig, ax = plt.subplots(figsize=(7, 7))
-    ax.imshow(img, extent=[rect[1][0] * 0.01 , rect[1][0] * 0.07 ,  rect[2][1] * 0.01, rect[2][1] * 0.05], alpha=0.1)
+    ax.imshow(img, extent=[rect[0][0] , rect[1][0] * 0.07 ,  rect[0][1], rect[2][1] * 0.05], alpha=0.1)
 
     n = len(poly.pts)
     names = poly.names
