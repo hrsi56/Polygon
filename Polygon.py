@@ -368,7 +368,7 @@ def main():
             )
             for i in range(1, n + 1)
         ]
-        add_extra = st.checkbox("אל תתקן את הנתונים. תסגור את הצורה כמו שנתתי לך ")
+        add_extra = st.checkbox(f"אל תתקן את הנתונים. תסגור את הצורה כמו שנתתי לך. \n (תתווסף צלע. המצולע יהיה בעל {n+1} צלעות) ")
         if add_extra:
             poly = build_polygon_with_extra(lengths,
                                             angs)
