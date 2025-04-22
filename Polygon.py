@@ -12,7 +12,7 @@ from typing import List, Sequence
 import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
-
+import matplotlib.image as mpimg
 
 TOL = 1e-6
 LABEL_SHIFT = -0.05        # outward label offset (fraction of min side)
@@ -342,7 +342,6 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
                       edgecolor="none"))
     return fig, diags, altitudes_data
 
-    import matplotlib.image as mpimg
 
     img = mpimg.imread('Subject.PNG')  # or use plt.imread()
     ax.imshow(*(rect[0]-[0.5,0.1] * (rect[3]+rect[1]) ),img)
