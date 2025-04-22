@@ -331,8 +331,8 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     rc = np.vstack([rect, rect[0]])
     ax.plot(rc[:, 0], rc[:, 1], "k-.", lw=1, alpha=0.5)
     HW = h*w
-    mid_w = 0.5 * (rect[0] + rect[1]) - np.array([0.1, 0.05])
-    mid_h = 0.5 * (rect[1] + rect[2]) + np.array([0.01, 0.05])
+    mid_w = 0.5 * (rect[0] + rect[1]) - [0.1, 0.05]
+    mid_h = 0.5 * (rect[1] + rect[2]) + [0.05, 0.1]
     ax.text(*mid_w, f"w={w:.2f}", fontsize=8,
             ha="center", va="bottom")
     ax.text(*mid_h, f"h={h:.2f}", fontsize=8,
