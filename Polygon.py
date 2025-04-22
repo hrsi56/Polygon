@@ -357,10 +357,17 @@ def main():
         st.stop()
 
     if st.checkbox("Provide internal angles?"):
-        angs = [st.number_input(
-            f"∠ {vertex_names(n)[i]} , {i+1}∠{i+2}", 1.0, 360.0,
-            round(180 * (n - 2) / n, 1), 1.0, key=f"A{i}"
-        ) for i in range(n)]
+        angs = [
+            st.number_input(
+                f"∠ {vertex_names(n)[(i + 1) % n]} , {i + 1}∠{(i + 2) % n}",
+                min_value=1.0,
+                max_value=360.0,
+                value=round(180 * (n - 2) / n, 1),
+                step=1.0,
+                key=f"A{i + 1}"
+            )
+            for i in range(n)
+        ]
         add_extra = st.checkbox("אל תתקן את הנתונים. תסגור את הצורה כמו שנתתי לך ")
         if add_extra:
             poly = build_polygon_with_extra(lengths,
