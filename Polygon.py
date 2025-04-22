@@ -278,7 +278,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
         edge_norm = np.array([-edge[1], edge[0]]) / np.linalg.norm(edge)
         ax.text(*(mid + edge_norm * LABEL_SHIFT * min_len),
                 f"{poly.lengths[i]:.2f}", fontsize=7,
-                bbox=dict(facecolor="white", alpha=0.7,
+                bbox=dict(facecolor="purple", alpha=0.7,
                           edgecolor="none"),
                 ha="center", va="center")
 
