@@ -325,9 +325,9 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     HW = h*w
     mid_w = 0.5 * (rect[0] + rect[1]) - [0.1, 0.05]
     mid_h = 0.5 * (rect[1] + rect[2]) + [0.05, 0.1]
-    ax.text(*(rect[0]-[0,0.3]), f"w={w:.2f}", fontsize=8,
+    ax.text(*(rect[0]-[0,0.25]), f"w={w:.2f}", fontsize=8,
             ha="left", va="center")
-    ax.text(*(rect[0]-[0,0.4]), f"h={h:.2f}", fontsize=8,
+    ax.text(*(rect[0]-[0,0.3]), f"h={h:.2f}", fontsize=8,
             ha="left", va="center")
     ax.text(*(rect[0]-[0,0.2]), f"Area REC={HW:.2f}", fontsize=8,
             ha="left", va="center")
