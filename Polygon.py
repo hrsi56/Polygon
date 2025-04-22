@@ -321,7 +321,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     # ----- bounding rectangle ---------------------------------------------
     rect, w, h = bounding_rect(poly.pts)
     rc = np.vstack([rect, rect[0]])
-    ax.plot(rc[:, 0], rc[:, 1], "purple-.", lw=1, alpha=0.5)
+    ax.plot(rc[:, 0], rc[:, 1], "p-.", lw=1, alpha=0.5)
     HW = h*w
 
     ax.text(*(rect[0]-[0,0.25] * (rect[3])), f"w={w:.2f}", fontsize=8,
