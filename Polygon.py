@@ -342,6 +342,11 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
                       edgecolor="none"))
     return fig, diags, altitudes_data
 
+    import matplotlib.image as mpimg
+
+    img = mpimg.imread('Subject.PNG')  # or use plt.imread()
+    ax.imshow(*(rect[0]-[0.5,0.1] * (rect[3]+rect[1]) ),img)
+
 # ────── Streamlit UI ───────────────────────────────────────────────────────
 def main():
     st.set_page_config(page_title="Polygon Drawer", layout="centered")
