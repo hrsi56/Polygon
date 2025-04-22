@@ -221,6 +221,10 @@ def triangle_altitudes(pts: np.ndarray):
 
 # ────── drawing routine ───────────────────────────────────────────────────
 def draw_polygon(poly: PolygonData, show_altitudes: bool):
+    rect, w, h = bounding_rect(poly.pts)
+    img = mpimg.imread('Subject.PNG')  # or use plt.imread()
+    ax.imshow(img, extent=[rect[0][0], rect[1][0], rect[3][1], rect[2][1]],alpha= 0.15)
+
     n = len(poly.pts)
     names = poly.names
     pts_closed = np.vstack([poly.pts, poly.pts[0]])
@@ -319,7 +323,6 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
                     color="magenta", ha="left", va="bottom")
 
     # ----- bounding rectangle ---------------------------------------------
-    rect, w, h = bounding_rect(poly.pts)
     rc = np.vstack([rect, rect[0]])
     ax.plot(rc[:, 0], rc[:, 1], "-.", lw=1, alpha=0.5, color="purple")
     HW = h*w
@@ -342,8 +345,6 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
                       edgecolor="none"))
 
 
-    img = mpimg.imread('Subject.PNG')  # or use plt.imread()
-    ax.imshow(img, extent=[rect[0][0], rect[1][0], rect[3][1], rect[2][1]],alpha= 0.15)
     ax.text(*(rect[1] - [0,0.1] * (rect[3]) -  [0.6,0] * (rect[1])),"Created by:\nYarden Viktor Dejorno",fontsize=9,
                 ha="left", va="center")
 
