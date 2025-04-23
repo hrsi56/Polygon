@@ -372,7 +372,7 @@ def main():
 
     n = st.number_input("Number of sides", 3, 12, 4, 1)
     lengths = [st.number_input(f"Length {i + 1}", 0.1, 10000.0,
-                               1.0, 0.1, key=f"L{i}") for i in range(n)]
+                               1.0, 0.5, key=f"L{i}") for i in range(n)]
 
     if not is_polygon_possible(lengths):
         st.error("⚠️  Side lengths violate polygon inequality.")
