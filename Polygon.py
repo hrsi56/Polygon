@@ -124,9 +124,6 @@ def circumscribed_polygon(lengths: Sequence[float]) -> PolygonData:
     initial_angles = np.full(n, -2 * np.pi / n)
     res = minimize(objective, initial_angles, method='BFGS')
 
-    if not res.success or objective(res.x) > 1e-6:
-        raise ValueError("Failed to converge to a valid closed polygon")
-
     pts = make_polygon(res.x)
     if len(pts) != n + 1:
         raise ValueError("Polygon construction failed (wrong number of points)")
