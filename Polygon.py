@@ -357,7 +357,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
                       edgecolor="none"))
 
 
-    ax.text(*(rect[1] - [0,0.2] * (rect[3]) -  [0.6,0] * (rect[1])),"Created by:\nYarden Viktor Dejorno",fontsize=9,
+    ax.text(*(rect[1] - [0.2,0] * (rect[3]) -  [0,0.6] * (rect[1])),"Created by:\nYarden Viktor Dejorno",fontsize=9,
                 ha="left", va="center")
 
 
