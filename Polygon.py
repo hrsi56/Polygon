@@ -8,7 +8,7 @@ import math
 import string
 import zipfile
 from dataclasses import dataclass
-from typing import List, Sequence
+from typing import List, Sequence , Sequence, NamedTuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -102,28 +102,59 @@ def repaired_angles(n: int, angs: Sequence[float] | None):
     k = (n - 2) * 180.0 / sum(angs)
     return [a * k for a in angs]
 
+class PolygonData(NamedTuple):
+    points: list[tuple[float, float]]
+    lengths: list[float]
+    angles: list[float]
 
 def circumscribed_polygon(lengths: Sequence[float]) -> PolygonData:
-    n = len(lengths)
-    lengths = np.asarray(lengths, float)
-    angs0 = np.ones(n) * 180 * (n - 2) / n  # זוויות התחלתיות אחידות
-    bounds = [(1.0, 179.0) for _ in range(n)]  # תחום בטוח לכל זווית פנימית
+    L = np.array(lengths, dtype=float)
+    n = len(L)
 
-    def loss(angles):
-        poly = build_polygon(lengths, angles)
-        area = shoelace_area(poly.pts)
-        gap = poly.pts[0] - poly.pts[-1]
-        closure_error = np.linalg.norm(gap)
-        angle_sum_error = abs(sum(angles) - (n - 2) * 180)
-        return -area + 1000 * closure_error + 10 * angle_sum_error
+    # בונים את המצולע לפי רצף זוויות יחסיות (delta_angles)
+    def build_points(delta_angles):
+        thetas = np.cumsum(np.concatenate([[0], delta_angles]))
+        pts = [np.array([0.0, 0.0]), np.array([L[0], 0.0])]
+        for i in range(1, n - 1):
+            vec = L[i] * np.array([np.cos(thetas[i]), np.sin(thetas[i])])
+            pts.append(pts[-1] + vec)
+        return np.array(pts)
 
-    result = minimize(loss, angs0, bounds=bounds, method='L-BFGS-B')
+    # פונקציית מטרה: המרחק בין הקודקוד האחרון לראשון
+    def objective(delta_angles):
+        pts = build_points(delta_angles)
+        end = pts[-1] + L[-1] * np.array([np.cos(np.sum(delta_angles)), np.sin(np.sum(delta_angles))])
+        return np.linalg.norm(end - pts[0]) ** 2
+
+    # ניחוש ראשוני: זוויות שוות
+    initial_guess = np.full(n - 2, 2 * np.pi / n)
+
+    result = minimize(objective, initial_guess, method='BFGS')
 
     if not result.success:
         raise RuntimeError("Optimization failed: " + result.message)
 
-    optimized_angles = result.x
-    return build_polygon(lengths, optimized_angles)
+    delta_angles = result.x
+    pts = build_points(delta_angles)
+    # הוספת הנקודה האחרונה שמחזירה להתחלה
+    last_theta = np.sum(delta_angles)
+    pts = np.vstack([pts, pts[-1] + L[-1] * [np.cos(last_theta), np.sin(last_theta)]])
+
+    # חישוב זוויות פנימיות לפי מכפלה סקלרית
+    def internal_angles(points):
+        angles = []
+        for i in range(n):
+            p0 = points[i - 1]
+            p1 = points[i]
+            p2 = points[(i + 1) % n]
+            v1 = p0 - p1
+            v2 = p2 - p1
+            cosine = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+            angle = np.arccos(np.clip(cosine, -1, 1))
+            angles.append(np.degrees(angle))
+        return angles
+
+    return PolygonData(points=[tuple(p) for p in pts], lengths=list(L), angles=internal_angles(pts))
 
 def build_polygon(lengths: Sequence[float],
                   angles: Sequence[float]) -> PolygonData:
