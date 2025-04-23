@@ -102,40 +102,34 @@ def repaired_angles(n: int, angs: Sequence[float] | None):
     k = (n - 2) * 180.0 / sum(angs)
     return [a * k for a in angs]
 
+
 def circumscribed_polygon(lengths: Sequence[float]) -> PolygonData:
     L = np.array(lengths, dtype=float)
     n = len(L)
 
-    # בונים את המצולע לפי רצף זוויות יחסיות (delta_angles)
     def build_points(delta_angles):
         thetas = np.cumsum(np.concatenate([[0], delta_angles]))
-        pts = [np.array([0.0, 0.0]), np.array([L[0], 0.0])]
-        for i in range(1, n - 1):
+        pts = [np.array([0.0, 0.0])]
+        for i in range(n - 1):
             vec = L[i] * np.array([np.cos(thetas[i]), np.sin(thetas[i])])
             pts.append(pts[-1] + vec)
         return np.array(pts)
 
-    # פונקציית מטרה: המרחק בין הקודקוד האחרון לראשון
     def objective(delta_angles):
         pts = build_points(delta_angles)
-        end = pts[-1] + L[-1] * np.array([np.cos(np.sum(delta_angles)), np.sin(np.sum(delta_angles))])
+        last_theta = np.sum(delta_angles)
+        end = pts[-1] + L[-1] * np.array([np.cos(last_theta), np.sin(last_theta)])
         return np.linalg.norm(end - pts[0]) ** 2
 
-    # ניחוש ראשוני: זוויות שוות
     initial_guess = np.full(n - 2, 2 * np.pi / n)
 
     result = minimize(objective, initial_guess, method='BFGS')
-
     if not result.success:
         raise RuntimeError("Optimization failed: " + result.message)
 
     delta_angles = result.x
     pts = build_points(delta_angles)
-    # הוספת הנקודה האחרונה שמחזירה להתחלה
-    last_theta = np.sum(delta_angles)
-    direction = np.array([np.cos(last_theta), np.sin(last_theta)])
-    pts = np.vstack([pts, pts[-1] + L[-1] * direction])
-    # חישוב זוויות פנימיות לפי מכפלה סקלרית
+
     def internal_angles(points):
         angles = []
         for i in range(n):
@@ -149,7 +143,8 @@ def circumscribed_polygon(lengths: Sequence[float]) -> PolygonData:
             angles.append(np.degrees(angle))
         return angles
 
-    return PolygonData(pts, list(L), internal_angles(pts))
+    return PolygonData(pts=pts, lengths=list(L), angles_int=internal_angles(pts))
+
 def build_polygon(lengths: Sequence[float],
                   angles: Sequence[float]) -> PolygonData:
     n = len(lengths)
