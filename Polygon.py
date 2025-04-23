@@ -154,8 +154,7 @@ def circumscribed_polygon(lengths: Sequence[float]) -> PolygonData:
             angles.append(np.degrees(angle))
         return angles
 
-    return PolygonData([tuple(p) for p in pts], list(L), internal_angles(pts))
-
+    return PolygonData(pts, list(L), internal_angles(pts))
 def build_polygon(lengths: Sequence[float],
                   angles: Sequence[float]) -> PolygonData:
     n = len(lengths)
