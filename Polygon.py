@@ -107,7 +107,6 @@ def circumscribed_polygon(lengths: Sequence[float]) -> PolygonData:
     n = len(lengths)
     lengths = np.asarray(lengths, float)
 
-    # פונקציה שמקבלת סט של turning angles ומחזירה קואורדינטות של המצולע
     def make_polygon(angles_rad):
         angle = 0
         pts = [np.array([0.0, 0.0])]
@@ -118,24 +117,21 @@ def circumscribed_polygon(lengths: Sequence[float]) -> PolygonData:
             pts.append(pts[-1] + np.array([dx, dy]))
         return np.array(pts)
 
-    # פונקציית מטרה: עד כמה הנקודה האחרונה רחוקה מהראשונה
     def objective(angles_rad):
         pts = make_polygon(angles_rad)
-        return np.linalg.norm(pts[-1] - pts[0])**2  # נרצה שזו תהיה 0
+        return np.linalg.norm(pts[-1] - pts[0])**2
 
-    # התחלה: פיזור אחיד של זוויות שיחזירו אותנו בסיבוב שלם
     initial_angles = np.full(n, -2 * np.pi / n)
-
     res = minimize(objective, initial_angles, method='BFGS')
 
-    if not res.success:
-        raise ValueError("Failed to converge to a closed polygon")
+    if not res.success or objective(res.x) > 1e-6:
+        raise ValueError("Failed to converge to a valid closed polygon")
 
-    # בונים את המצולע לפי הפתרון האופטימלי
-    angles = res.x
-    pts = make_polygon(angles)[:-1]  # מסירים את הנקודה האחרונה (כפולה של הראשונה)
+    pts = make_polygon(res.x)
+    if len(pts) != n + 1:
+        raise ValueError("Polygon construction failed (wrong number of points)")
+    pts = pts[:-1]  # Remove closing point
 
-    # חישוב זוויות פנימיות
     angles_int = []
     for i in range(n):
         a = pts[i - 1] - pts[i]
@@ -144,6 +140,7 @@ def circumscribed_polygon(lengths: Sequence[float]) -> PolygonData:
         angles_int.append(np.degrees(ang))
 
     return PolygonData(pts, list(lengths), angles_int)
+
 
 def build_polygon(lengths: Sequence[float],
                   angles: Sequence[float]) -> PolygonData:
