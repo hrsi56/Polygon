@@ -339,17 +339,17 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     ax.plot(rc[:, 0], rc[:, 1], "-.", lw=1, alpha=0.5, color="purple")
     HW = h*w
 
-    ax.text(*(rect[0]-[0,0.25] * (rect[3])), f"w={w:.2f}", fontsize=8,
+    ax.text(*(rect[0]-[0,0.09] * (rect[3] - rect[0] )), f"w={w:.2f}", fontsize=8,
             ha="left", va="center" , color="purple")
-    ax.text(*(rect[0]-[0,0.3] * (rect[3])), f"h={h:.2f}", fontsize=8,
+    ax.text(*(rect[0]-[0,0.12] * (rect[3] - rect[0] )), f"h={h:.2f}", fontsize=8,
             ha="left", va="center" , color="purple")
-    ax.text(*(rect[0]-[0,0.2] * (rect[3])), f"Area REC={HW:.2f}", fontsize=8,
+    ax.text(*(rect[0]-[0,0.06] * (rect[3] - rect[0] )), f"Area REC={HW:.2f}", fontsize=8,
             ha="left", va="center" , color="purple")
 
 
 
     # ----- area label ------------------------------------------------------
-    ax.text(*(rect[0]-[0,0.1] * (rect[3]) ),
+    ax.text(*(rect[0]-[0,0.03] * (rect[3] - rect[0] ) ),
             f"Area Poligon = {shoelace_area(poly.pts):.2f}",
             fontsize=9, color="green",
             ha="left", va="center",
