@@ -368,8 +368,8 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
 # ────── Streamlit UI  ───────────────────────────────────────────────────────
 def main():
     st.set_page_config(page_title="Polygon Drawer", layout="centered")
-    st.title("📐 Polygon Drawer\n לינקו. \n תמורת טובות הנעה")
-    st.subtitle(" לינקו. \n תמורת טובות הנעה")
+    st.title("📐 Polygon Drawer")
+    st.text(" לינקו. \n תמורת טובות הנעה" , fontsize= 14 )
 
     n = st.number_input("Number of sides", 3, 12, 4, 1)
     lengths = [st.number_input(f"Length {i + 1}", 0.1, 10000.0,
