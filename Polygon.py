@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from scipy.optimize import minimize
 import datetime as dt
 import io
 import json
@@ -104,28 +105,25 @@ def repaired_angles(n: int, angs: Sequence[float] | None):
 
 def circumscribed_polygon(lengths: Sequence[float]) -> PolygonData:
     n = len(lengths)
-    L = np.asarray(lengths, float)
-    R_lo, R_hi = max(L) / 2 + 1e-9, 1e6
+    lengths = np.asarray(lengths, float)
+    angs0 = np.ones(n) * 180 * (n - 2) / n  # זוויות התחלתיות אחידות
+    bounds = [(1.0, 179.0) for _ in range(n)]  # תחום בטוח לכל זווית פנימית
 
-    def total(R: float) -> float:
-        return np.sum(2 * np.arcsin(np.clip(L / (2 * R),
-                                            -1 + 1e-12, 1 - 1e-12)))
+    def loss(angles):
+        poly = build_polygon(lengths, angles)
+        area = shoelace_area(poly.pts)
+        gap = poly.pts[0] - poly.pts[-1]
+        closure_error = np.linalg.norm(gap)
+        angle_sum_error = abs(sum(angles) - (n - 2) * 180)
+        return -area + 1000 * closure_error + 10 * angle_sum_error
 
-    for _ in range(60):
-        mid = 0.5 * (R_lo + R_hi)
-        if total(mid) > 2 * math.pi:
-            R_lo = mid
-        else:
-            R_hi = mid
-    R = 0.5 * (R_lo + R_hi)
+    result = minimize(loss, angs0, bounds=bounds, method='L-BFGS-B')
 
-    central = 2 * np.arcsin(L / (2 * R))
-    theta = np.concatenate(([0.0], np.cumsum(central)))[:-1]
-    pts = np.stack([R * np.cos(theta), R * np.sin(theta)], axis=1)
-    angles = [math.degrees(math.pi - 0.5 *
-             (central[i - 1] + central[i])) for i in range(n)]
-    return PolygonData(pts, list(L), angles)
+    if not result.success:
+        raise RuntimeError("Optimization failed: " + result.message)
 
+    optimized_angles = result.x
+    return build_polygon(lengths, optimized_angles)
 
 def build_polygon(lengths: Sequence[float],
                   angles: Sequence[float]) -> PolygonData:
