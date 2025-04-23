@@ -138,8 +138,8 @@ def circumscribed_polygon(lengths: Sequence[float]) -> PolygonData:
     pts = build_points(delta_angles)
     # הוספת הנקודה האחרונה שמחזירה להתחלה
     last_theta = np.sum(delta_angles)
-    pts = np.vstack([pts, pts[-1] + L[-1] * [np.cos(last_theta), np.sin(last_theta)]])
-
+    direction = np.array([np.cos(last_theta), np.sin(last_theta)])
+    pts = np.vstack([pts, pts[-1] + L[-1] * direction])
     # חישוב זוויות פנימיות לפי מכפלה סקלרית
     def internal_angles(points):
         angles = []
