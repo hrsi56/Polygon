@@ -371,7 +371,7 @@ def main():
     st.title("📐 Polygon Drawer – לינקו. בתמורה לטובות הנעה")
 
     n = st.number_input("Number of sides", 3, 12, 4, 1)
-    lengths = [st.number_input(f"Length {i + 1}", 0.01, 1000.0,
+    lengths = [st.number_input(f"Length {i + 1}", 0.01, 10000.0,
                                1.0, 0.1, key=f"L{i}") for i in range(n)]
 
     if not is_polygon_possible(lengths):
