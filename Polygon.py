@@ -102,11 +102,6 @@ def repaired_angles(n: int, angs: Sequence[float] | None):
     k = (n - 2) * 180.0 / sum(angs)
     return [a * k for a in angs]
 
-class PolygonData(NamedTuple):
-    points: list[tuple[float, float]]
-    lengths: list[float]
-    angles: list[float]
-
 def circumscribed_polygon(lengths: Sequence[float]) -> PolygonData:
     L = np.array(lengths, dtype=float)
     n = len(L)
