@@ -249,14 +249,22 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
 
     min_len = min(poly.lengths)
 
-
-
     # --- distances from rect corners to nearest polygon points, with smart edge comparison ---
     rect_edges = [rect[1] - rect[0], rect[3] - rect[0]]  # וקטורי צלעות: רוחב וגובה
 
     for corner in rect:
         dists = [np.linalg.norm(corner - p) for p in poly.pts]
         nearest_indices = np.argsort(dists)[:2]  # שני הקרובים ביותר
+        vecs = [poly.pts[idx] - corner for idx in nearest_indices]
+
+        # נבדוק אם הוקטורים כמעט מקבילים
+        angle_diff = None
+        if all(np.linalg.norm(v) > 1e-8 for v in vecs):
+            u = vecs[0] / np.linalg.norm(vecs[0])
+            v = vecs[1] / np.linalg.norm(vecs[1])
+            dot = abs(np.dot(u, v))  # ערך מוחלט – מקביל או אנטי-מקביל
+            if dot > 0.998:  # כמעט אותו כיוון
+                nearest_indices = [nearest_indices[0]]  # נשתמש רק בקודקוד הקרוב יותר
 
         for idx in nearest_indices:
             p = poly.pts[idx]
@@ -275,19 +283,19 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
                 if edge_len < 0.5:
                     continue
                 edge_dir = edge_vec / edge_len
-                cos_angle = abs(np.dot(vec_norm, edge_dir))  # כמה הוקטורים מיושרים
+                cos_angle = abs(np.dot(vec_norm, edge_dir))
 
                 if cos_angle > best_cos:
                     best_cos = cos_angle
                     best_edge_len = edge_len
 
-            # תנאי סינון: אם המרחק קצר יותר מאורך הצלע המתאימה
             if best_edge_len and dist < best_edge_len:
                 ax.plot([p[0], corner[0]], [p[1], corner[1]],
                         color="orange", lw=4, alpha=0.3)
                 mid = (p + corner) / 2
                 ax.text(*mid, f"{dist:.2f}", fontsize=6, color="orange",
                         ha="center", va="center")
+
 
 
     # ----- diagonals -------------------------------------------------------
