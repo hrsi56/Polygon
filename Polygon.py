@@ -387,7 +387,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
         edge_norm = np.array([-edge[1], edge[0]])
         if np.linalg.norm(edge_norm) > 0:
             edge_norm /= np.linalg.norm(edge_norm)
-        label_pos = base_point + edge_norm * LABEL_SHIFT * min_len
+        label_pos = base_point + edge_norm * LABEL_SHIFT * min_len * 4
 
         # ציור הזווית ליד תחילת הצלע
         ax.text(*label_pos,
