@@ -370,7 +370,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
         for p_idx, p in enumerate(poly.pts):
             corner = poly.pts[p_idx]
             dist = dists[p_idx]
-            if dist < np.sqrt(np.square(rect[1]) - np.square([0])) :
+            if dist < np.sqrt(np.square(rect[1]) - np.square(rect[0])) :
                 ax.plot([p[0], corner[0]], [p[1], corner[1]],
                         linestyle="dotted", color="orange", lw=0.8, alpha = 0.5)
                 mid = (p + corner) / 2
