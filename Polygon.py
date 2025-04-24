@@ -402,9 +402,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     ax.text(*(rect[0]-[0,0.03] * (rect[3] - rect[0] ) ),
             f"Area Poligon = {shoelace_area(poly.pts):.2f}",
             fontsize=9, color="green",
-            ha="left", va="center",
-            bbox=dict(facecolor="white", alpha=0.7,
-                      edgecolor="none"))
+            ha="left", va="center")
 
 
     ax.text(*(rect[1] - [0,0.06] * (rect[3] - rect[0]) -  [0.4,0] * (rect[1]- rect[0])),"Created by:\nYarden Viktor Dejorno",fontsize=9,
