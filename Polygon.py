@@ -491,6 +491,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     ax.text(*(rect[1] - [0,0.12] * (rect[3] - rect[0]) -  [0.3,0] * (rect[1]- rect[0])),"The App Created by:\nYarden Viktor Dejorno",fontsize=9, font=font)
 
     # אנכים מכל קודקוד של המצולע אל 2 הצלעות הקרובות של המלבן
+
     rect_sides = [(rect[i], rect[(i + 1) % 4]) for i in range(4)]
 
     for pt in poly.pts:
@@ -512,9 +513,21 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
         # בחר את שתי הצלעות הכי קרובות
         distances.sort(key=lambda x: x[0])
         for i in range(2):
-            _, foot, (p1, p2) = distances[i]
+            dist, foot, (p1, p2) = distances[i]
             ax.plot([pt[0], foot[0]], [pt[1], foot[1]],
                     linestyle="dashed", linewidth=0.8, color="green", alpha=0.7)
+
+            # מיקום הטקסט – אמצע הקו + הזחה קטנה לצד
+            mid = 0.5 * (pt + foot)
+            offset_vec = foot - pt
+            offset_vec = np.array([-offset_vec[1], offset_vec[0]])  # ניצב
+            if np.linalg.norm(offset_vec) > 0:
+                offset_vec /= np.linalg.norm(offset_vec)
+            label_pos = mid + offset_vec * LABEL_SHIFT * 0.6 * min_len
+
+            ax.text(*label_pos, f"{dist:.2f}", fontsize=6,
+                    color="green", ha="center", va="center",
+                    bbox=dict(facecolor="white", alpha=0.6, edgecolor="green"))
 
 
     return fig, diags, altitudes_data
