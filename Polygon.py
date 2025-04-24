@@ -360,9 +360,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
         ax.text(x + normal[0] * LABEL_SHIFT * min_len,
                 y + normal[1] * LABEL_SHIFT * min_len,
                 names[i], fontsize=9, weight="bold",
-                color="blue", ha="center", va="center",
-                bbox=dict(facecolor="white", alpha=0.8,
-                          boxstyle="circle,pad=0.25"))
+                color="blue", ha="center", va="center")
 
         mid = 0.5 * (poly.pts[i] + poly.pts[(i + 1) % n])
         edge = poly.pts[(i + 1) % n] - poly.pts[i]
