@@ -388,7 +388,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
         if np.linalg.norm(edge_norm) > 0:
             edge_norm /= np.linalg.norm(edge_norm)
         # סיבוב של הווקטור 30° עם כיוון השעון
-        theta = math.radians(30)
+        theta = math.radians(50)
         rotation_matrix = np.array([
             [math.cos(theta), math.sin(theta)],
             [-math.sin(theta), math.cos(theta)]
