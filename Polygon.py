@@ -383,10 +383,9 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
         angle_to_rect = min(angle_h, angle_v)  # הזווית המינימלית לאחת מצלעות המלבן
 
         # ציור זווית על גבי הצלע (קרוב לאמצע שלה)
-        ax.text(*(mid + edge_norm * LABEL_SHIFT * min_len * 1.5),
+        ax.text(*(mid + edge_norm * LABEL_SHIFT * min_len * 0.1),
                 f"∠{angle_to_rect:.1f}°", fontsize=7,
-                color="orange", ha="center", va="center",
-                bbox=dict(facecolor="white", alpha=0.6, edgecolor="orange"))
+                color="orange", ha="center", va="center")
 
     # Internal angles ----------------------------------------------------------
     for i in range(n):
