@@ -320,24 +320,8 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
                 ax.plot([p[0], corner[0]], [p[1], corner[1]],
                         color="orange", lw=4, alpha=0.3)
 
-                angle_to_edge = None
-                vec_norm = vec / dist
-
-                for edge_vec in rect_edges:
-                    edge_len = np.linalg.norm(edge_vec)
-                    if edge_len < 0.5:
-                        continue
-                    edge_dir = edge_vec / edge_len
-                    cos_angle = np.dot(vec_norm, edge_dir)
-                    angle = math.degrees(math.acos(np.clip(abs(cos_angle), -1, 1)))
-                    if angle_to_edge is None or angle < angle_to_edge:
-                        angle_to_edge = angle
-
-                # הוסף תווית עם אורך הקו + זווית
-                ax.text(*mid, f"{dist:.2f}\n∠{angle_to_edge:.1f}°",
-                        fontsize=6, color="black",
-                        ha="center", va="center",
-                        bbox=dict(facecolor="white", edgecolor="gray", alpha=0.5))
+                ax.text(*mid, f"{dist:.2f}", fontsize=6, color="black",
+                        ha="center", va="center")
 
     # ----- diagonals -------------------------------------------------------
     diags = diagonals_info(poly)
@@ -388,6 +372,21 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
                 bbox=dict(facecolor="green", alpha=0.15,
                           edgecolor="none"),
                 ha="center", va="center")
+
+        # חישוב זווית בין הצלע לצלעות המלבן
+        edge_dir = edge / np.linalg.norm(edge)
+        horizontal = np.array([1.0, 0.0])
+        vertical = np.array([0.0, 1.0])
+
+        angle_h = math.degrees(math.acos(np.clip(abs(np.dot(edge_dir, horizontal)), -1, 1)))
+        angle_v = math.degrees(math.acos(np.clip(abs(np.dot(edge_dir, vertical)), -1, 1)))
+        angle_to_rect = min(angle_h, angle_v)  # הזווית המינימלית לאחת מצלעות המלבן
+
+        # ציור זווית על גבי הצלע (קרוב לאמצע שלה)
+        ax.text(*(mid + edge_norm * LABEL_SHIFT * min_len * 1.5),
+                f"∠{angle_to_rect:.1f}°", fontsize=7,
+                color="orange", ha="center", va="center",
+                bbox=dict(facecolor="white", alpha=0.6, edgecolor="orange"))
 
     # Internal angles ----------------------------------------------------------
     for i in range(n):
