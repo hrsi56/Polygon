@@ -449,7 +449,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
         norm_len = np.linalg.norm(normal)
         if norm_len > 0:
             normal /= norm_len
-        offset = 0.17 * min_len
+        offset = 0.07 * min_len
         label_pos = mid + normal * offset
 
         ax.text(*label_pos,
