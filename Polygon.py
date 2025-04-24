@@ -509,7 +509,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     font = FontProperties(fname="Pacifico-Regular.ttf")  # או שם אחר שהורדת
     tp = TextPath((0, 0), logo_text, size=0.03, prop=font)
 
-    ax.text(*([0.4,1] * label_pos  ),"The App Created by:\nYarden Viktor Dejorno",fontsize=9, font=font)
+    ax.text(*([0.4,1.1] * label_pos  ),"The App Created by:\nYarden Viktor Dejorno",fontsize=9, font=font)
 
     # אנכים מכל קודקוד של המצולע אל 2 הצלעות הקרובות של המלבן
 
