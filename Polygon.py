@@ -16,7 +16,7 @@ import streamlit as st
 import matplotlib.image as mpimg
 
 TOL = 1e-6
-LABEL_SHIFT = -0.05        # outward label offset (fraction of min side)
+LABEL_SHIFT = 0.1        # outward label offset (fraction of min side)
 
 
 # ────── geometry helpers ──────────────────────────────────────────────────
@@ -307,7 +307,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
         bis = bis / np.linalg.norm(bis) if np.linalg.norm(bis) else np.array(
             [v_next[1], -v_next[0]]
         )
-        txt = p + bis * (-1.23 * min_len)
+        txt = p + bis * (0.23 * min_len)
         start = math.degrees(math.atan2(v_prev[1], v_prev[0]))
         end = start - (180 - poly.angles_int[i])
         ax.text(
