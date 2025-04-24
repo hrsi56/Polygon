@@ -257,7 +257,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
 
     for corner in rect:
         dists = [np.linalg.norm(corner - p) for p in poly.pts]
-        nearest_indices = np.argsort(dists)[:2]  # שני הקרובים ביותר
+        nearest_indices = np.argsort(dists)  # שני הקרובים ביותר
         vecs = [poly.pts[idx] - corner for idx in nearest_indices]
 
         # נבדוק אם הוקטורים כמעט מקבילים
