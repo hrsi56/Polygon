@@ -408,7 +408,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
         norm_len = np.linalg.norm(normal)
         if norm_len > 0:
             normal = normal / norm_len
-        offset = 0.1 * max(w, h)  # להזיז החוצה ב-0.05 מאורך הצלע הגדולה יותר
+        offset = -0.05 * max(w, h)  # להזיז החוצה ב-0.05 מאורך הצלע הגדולה יותר
         label_pos = mid + normal * offset
 
         ax.text(*label_pos,
