@@ -525,9 +525,10 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
                 offset_vec /= np.linalg.norm(offset_vec)
             label_pos = mid + offset_vec * LABEL_SHIFT * 0.6 * min_len
 
-            ax.text(*label_pos, f"{dist:.2f}", fontsize=6,
-                    color="green", ha="center", va="center",
-                    bbox=dict(facecolor="white", alpha=0.6, edgecolor="green"))
+            if dist > 0.01:
+
+                ax.text(*label_pos, f"{dist:.2f}", fontsize=3,
+                        color="green", ha="center", va="center")
 
 
     return fig, diags, altitudes_data
