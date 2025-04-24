@@ -396,7 +396,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
             # תנאי סינון: אם המרחק קצר יותר מאורך הצלע המתאימה
             if best_edge_len and dist < best_edge_len:
                 ax.plot([p[0], corner[0]], [p[1], corner[1]],
-                        linestyle="dotted", color="orange", lw=2, alpha=0.3)
+                        linestyle="dotted", color="orange", lw=2, alpha=0.5)
                 mid = (p + corner) / 2
                 ax.text(*mid, f"{dist:.2f}", fontsize=6, color="orange",
                         ha="center", va="center")
