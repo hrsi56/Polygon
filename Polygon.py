@@ -397,6 +397,27 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
             ha="left", va="center" , color="purple")
 
 
+    # --- כתיבת אורכי צלעות המלבן החיצוני בצד החיצוני שלו ---
+    edge_labels = [w, h, w, h]  # אורכים לפי סדר הקודקודים
+    for i in range(4):
+        p1 = rect[i]
+        p2 = rect[(i + 1) % 4]
+        mid = (p1 + p2) / 2
+        edge_vec = p2 - p1
+        normal = np.array([-edge_vec[1], edge_vec[0]])
+        norm_len = np.linalg.norm(normal)
+        if norm_len > 0:
+            normal = normal / norm_len
+        offset = 0.1 * max(w, h)  # להזיז החוצה ב-0.05 מאורך הצלע הגדולה יותר
+        label_pos = mid + normal * offset
+
+        ax.text(*label_pos,
+                f"{edge_labels[i]:.2f}",
+                fontsize=7,
+                color="purple",
+                ha="center", va="center",
+                bbox=dict(facecolor="white", edgecolor="none", alpha=0.6))
+
 
     # ----- area label ------------------------------------------------------
     ax.text(*(rect[0]-[0,0.03] * (rect[3] - rect[0] ) ),
