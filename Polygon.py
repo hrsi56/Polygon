@@ -373,23 +373,38 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
                           edgecolor="none"),
                 ha="center", va="center")
 
-        # חישוב זווית בין הצלע לצלעות המלבן
-        edge_dir = edge / np.linalg.norm(edge)
-        horizontal = np.array([1.0, 0.0])
-        vertical = np.array([0.0, 1.0])
 
-        angle_h = math.degrees(math.acos(np.clip(abs(np.dot(edge_dir, horizontal)), -1, 1)))
-        angle_v = math.degrees(math.acos(np.clip(abs(np.dot(edge_dir, vertical)), -1, 1)))
-        angle_to_rect = min(angle_h, angle_v)  # הזווית המינימלית לאחת מצלעות המלבן
+    # חישוב זווית בין הצלע לצלעות המלבן
+    edge_dir = edge / np.linalg.norm(edge)
+    horizontal = np.array([1.0, 0.0])
+    vertical = np.array([0.0, 1.0])
 
-        # ציור זווית על גבי הצלע
-        start = poly.pts[i]
-        label_pos = start + edge_norm * LABEL_SHIFT * min_len * 1.2
+    angle_h = math.degrees(math.acos(np.clip(abs(np.dot(edge_dir, horizontal)), -1, 1)))
+    angle_v = math.degrees(math.acos(np.clip(abs(np.dot(edge_dir, vertical)), -1, 1)))
+    angle_to_rect = min(angle_h, angle_v)
 
-        ax.text(*label_pos,
-                f"∠{angle_to_rect:.1f}°", fontsize=7,
-                color="orange", ha="center", va="center",
-                bbox=dict(facecolor="white", alpha=0.6, edgecolor="orange"))
+    # בחירת צלע רלוונטית של המלבן (אופקית או אנכית)
+    is_horizontal = angle_h < angle_v
+
+    p1 = poly.pts[i]
+    p2 = poly.pts[(i + 1) % n]
+
+    if is_horizontal:
+        # נמדוד לפי מרחק לגבולות Y
+        y_dists = [abs(p1[1] - rect[0][1]), abs(p1[1] - rect[2][1]),
+                   abs(p2[1] - rect[0][1]), abs(p2[1] - rect[2][1])]
+        point = p1 if y_dists[0] + y_dists[1] < y_dists[2] + y_dists[3] else p2
+    else:
+        # נמדוד לפי מרחק לגבולות X
+        x_dists = [abs(p1[0] - rect[0][0]), abs(p1[0] - rect[1][0]),
+                   abs(p2[0] - rect[0][0]), abs(p2[0] - rect[1][0])]
+        point = p1 if x_dists[0] + x_dists[1] < x_dists[2] + x_dists[3] else p2
+
+    # ציור טקסט ליד הקודקוד הנבחר
+    ax.text(*(point + edge_norm * LABEL_SHIFT * min_len * 1.2),
+            f"∠{angle_to_rect:.1f}°", fontsize=7,
+            color="orange", ha="center", va="center",
+            bbox=dict(facecolor="white", alpha=0.6, edgecolor="orange"))
 
     # Internal angles ----------------------------------------------------------
     for i in range(n):
