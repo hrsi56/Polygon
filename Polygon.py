@@ -431,10 +431,10 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     # --- לוגו טיפוגרפי של שם ---
     logo_text = "Created by Yarden Viktor Dejorno"
     font = FontProperties(fname="Pacifico-Regular.ttf")  # או שם אחר שהורדת
-    tp = TextPath((0, 0), logo_text, size=0.02, prop=font)
+    tp = TextPath((0, 0), logo_text, size=0.04, prop=font)
 
     # מיקום כמו שעשית - פינה תחתונה־ימנית, טיפה שמאלה ולמטה
-    base_pos = rect[1] - [0, 0.12] * (rect[3] - rect[0]) - [0.3, 0] * (rect[1] - rect[0])
+    base_pos = rect[1] - [0, 0.12] * (rect[3] - rect[0]) - [0.4, 0] * (rect[1] - rect[0])
 
     # טרנספורמציה למיקום הלוגו על התמונה
     transform = Affine2D().translate(*base_pos) + ax.transData
