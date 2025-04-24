@@ -252,21 +252,28 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
 
     min_len = min(poly.lengths)
 
-    # --- distances from rect corners to nearest polygon points, with smart edge comparison ---
+    def segments_intersect(p1, p2, q1, q2) -> bool:
+        """Check if segments (p1,p2) and (q1,q2) intersect (excluding endpoints)."""
+
+        def ccw(a, b, c):
+            return (c[1] - a[1]) * (b[0] - a[0]) > (b[1] - a[1]) * (c[0] - a[0])
+
+        return (ccw(p1, q1, q2) != ccw(p2, q1, q2)) and (ccw(p1, p2, q1) != ccw(p1, p2, q2))
+
+    # --- distances from rect corners to polygon points, with smart edge comparison ---
     rect_edges = [rect[1] - rect[0], rect[3] - rect[0]]  # וקטורי צלעות: רוחב וגובה
 
     for corner in rect:
         dists = [np.linalg.norm(corner - p) for p in poly.pts]
-        nearest_indices = np.argsort(dists)  # שני הקרובים ביותר
+        nearest_indices = np.argsort(dists)
         vecs = [poly.pts[idx] - corner for idx in nearest_indices]
 
         # נבדוק אם הוקטורים כמעט מקבילים
-        angle_diff = None
-        if all(np.linalg.norm(v) > 1e-8 for v in vecs):
+        if all(np.linalg.norm(v) > 1e-8 for v in vecs[:2]):
             u = vecs[0] / np.linalg.norm(vecs[0])
             v = vecs[1] / np.linalg.norm(vecs[1])
             dot = abs(np.dot(u, v))  # ערך מוחלט – מקביל או אנטי-מקביל
-            if dot > 0.998:  # כמעט אותו כיוון
+            if dot > 0.998:
                 nearest_indices = [nearest_indices[0]]  # נשתמש רק בקודקוד הקרוב יותר
 
         for idx in nearest_indices:
@@ -276,10 +283,24 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
             if dist < 1e-8:
                 continue
 
-            # בדיקת התאמה לצלעות המלבן לפי קוסינוס הזווית (מכפלה סקלרית מנורמלת)
+            # --- בדוק אם הקו חוצה את המצולע ---
+            intersects = False
+            for i in range(n):
+                a = poly.pts[i]
+                b = poly.pts[(i + 1) % n]
+                # דלג אם זו אותה נקודה או הצלע נושקת לפינה
+                if np.allclose(a, corner) or np.allclose(b, corner) or np.allclose(a, p) or np.allclose(b, p):
+                    continue
+                if segments_intersect(corner, p, a, b):
+                    intersects = True
+                    break
+            if intersects:
+                continue  # אל תצייר את הקו הזה
+
+            # בדיקת התאמה לצלעות המלבן לפי קוסינוס הזווית
             vec_norm = vec / dist
             best_edge_len = None
-            best_cos = -1  # ערך נמוך מאוד כדי להבטיח שתמיד נמצא טוב יותר
+            best_cos = -1
 
             for edge_vec in rect_edges:
                 edge_len = np.linalg.norm(edge_vec)
@@ -298,7 +319,6 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
                 mid = (p + corner) / 2
                 ax.text(*mid, f"{dist:.2f}", fontsize=6, color="black",
                         ha="center", va="center")
-
 
 
     # ----- diagonals -------------------------------------------------------
