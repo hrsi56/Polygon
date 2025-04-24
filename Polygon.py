@@ -433,9 +433,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     font = FontProperties(fname="Pacifico-Regular.ttf")  # או שם אחר שהורדת
     tp = TextPath((0, 0), logo_text, size=0.03, prop=font)
 
-    ax.text(*(rect[1] - [0,0.12] * (rect[3] - rect[0]) -  [0.3,0] * (rect[1]- rect[0])),"The App Created by:\nYarden Viktor Dejorno",fontsize=9,
-            ha="left", va="center", font=font,
-            bbox=dict(facecolor="white", edgecolor="none", alpha=0.6))
+    ax.text(*(rect[1] - [0,0.12] * (rect[3] - rect[0]) -  [0.3,0] * (rect[1]- rect[0])),"The App Created by:\nYarden Viktor Dejorno",fontsize=9, font=font)
 
 
 
