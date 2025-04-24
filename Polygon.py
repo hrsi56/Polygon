@@ -289,7 +289,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
                     best_cos = cos_angle
                     best_edge_len = edge_len
 
-            if best_edge_len:
+            if best_edge_len and dist < best_edge_len:
                 ax.plot([p[0], corner[0]], [p[1], corner[1]],
                         color="orange", lw=4, alpha=0.3)
                 mid = (p + corner) / 2
