@@ -468,7 +468,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
                 ha="center", va="center",
                 bbox=dict(facecolor="white", edgecolor="none", alpha=0.6))
 
-    i=0
+    i=1
     p1 = rect[i]
     p2 = rect[(i + 1) % 4]
     mid = (p1 + p2) / 2
@@ -496,7 +496,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
 
 
 
-    i=3
+    i=0
     p1 = rect[i]
     p2 = rect[(i + 1) % 4]
     mid = (p1 + p2) / 2
