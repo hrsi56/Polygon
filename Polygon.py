@@ -16,7 +16,7 @@ import streamlit as st
 import matplotlib.image as mpimg
 
 TOL = 1e-6
-LABEL_SHIFT = 0.1        # outward label offset (fraction of min side)
+LABEL_SHIFT = 0.05        # outward label offset (fraction of min side)
 
 
 # ────── geometry helpers ──────────────────────────────────────────────────
