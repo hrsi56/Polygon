@@ -387,7 +387,16 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
         edge_norm = np.array([-edge[1], edge[0]])
         if np.linalg.norm(edge_norm) > 0:
             edge_norm /= np.linalg.norm(edge_norm)
-        label_pos = base_point + edge_norm * LABEL_SHIFT * min_len * 4
+        # סיבוב של הווקטור 30° עם כיוון השעון
+        theta = math.radians(30)
+        rotation_matrix = np.array([
+            [math.cos(theta), math.sin(theta)],
+            [-math.sin(theta), math.cos(theta)]
+        ])
+        rotated_vec = rotation_matrix @ edge_norm
+
+        # מיקום הטקסט אחרי סיבוב
+        label_pos = base_point + rotated_vec * LABEL_SHIFT * min_len * 3
 
         # ציור הזווית ליד תחילת הצלע
         ax.text(*label_pos,
