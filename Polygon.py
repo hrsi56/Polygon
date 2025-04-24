@@ -367,13 +367,11 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
         mid = 0.5 * (poly.pts[i] + poly.pts[(i + 1) % n])
         edge = poly.pts[(i + 1) % n] - poly.pts[i]
         edge_norm = np.array([-edge[1], edge[0]]) / np.linalg.norm(edge)
-        start = poly.pts[i]
-        label_pos = start + edge_norm * LABEL_SHIFT * min_len * 1.2
-
-        ax.text(*label_pos,
-                f"∠{angle_to_rect:.1f}°", fontsize=7,
-                color="orange", ha="center", va="center",
-                bbox=dict(facecolor="white", alpha=0.6, edgecolor="orange"))
+        ax.text(*(mid + edge_norm * LABEL_SHIFT * min_len),
+                f"{poly.lengths[i]:.2f}", fontsize=7,
+                bbox=dict(facecolor="green", alpha=0.15,
+                          edgecolor="none"),
+                ha="center", va="center")
 
         # חישוב זווית בין הצלע לצלעות המלבן
         edge_dir = edge / np.linalg.norm(edge)
@@ -384,10 +382,14 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
         angle_v = math.degrees(math.acos(np.clip(abs(np.dot(edge_dir, vertical)), -1, 1)))
         angle_to_rect = min(angle_h, angle_v)  # הזווית המינימלית לאחת מצלעות המלבן
 
-        # ציור זווית על גבי הצלע (קרוב לאמצע שלה)
-        ax.text(*(mid + edge_norm * LABEL_SHIFT * min_len * 2),
+        # ציור זווית על גבי הצלע
+        start = poly.pts[i]
+        label_pos = start + edge_norm * LABEL_SHIFT * min_len * 1.2
+
+        ax.text(*label_pos,
                 f"∠{angle_to_rect:.1f}°", fontsize=7,
-                color="orange", ha="center", va="center")
+                color="orange", ha="center", va="center",
+                bbox=dict(facecolor="white", alpha=0.6, edgecolor="orange"))
 
     # Internal angles ----------------------------------------------------------
     for i in range(n):
