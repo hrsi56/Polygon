@@ -468,7 +468,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
                 ha="center", va="center",
                 bbox=dict(facecolor="white", edgecolor="none", alpha=0.6))
 
-    i=3
+    i=0
     p1 = rect[i]
     p2 = rect[(i + 1) % 4]
     mid = (p1 + p2) / 2
@@ -481,22 +481,22 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     label_pos = mid + normal * offset
 
     
-    ax.text(*([-1,1.06] * label_pos  ), f"w={w:.2f}", fontsize=8,
+    ax.text(*([0,1.06] * label_pos  ), f"w={w:.2f}", fontsize=8,
             ha="left", va="center" , color="purple")
-    ax.text(*([-1,1.09] * label_pos  ), f"h={h:.2f}", fontsize=8,
+    ax.text(*([0,1.09] * label_pos  ), f"h={h:.2f}", fontsize=8,
             ha="left", va="center" , color="purple")
-    ax.text(*([-1,1.03] * label_pos ), f"Area REC={HW:.2f}", fontsize=8,
+    ax.text(*([0,1.03] * label_pos ), f"Area REC={HW:.2f}", fontsize=8,
             ha="left", va="center" , color="purple")
 
     # ----- area label ------------------------------------------------------
-    ax.text(*([-1,1] * label_pos  ),
+    ax.text(*([0,1] * label_pos  ),
             f"Area Poligon = {shoelace_area(poly.pts):.2f}",
             fontsize=9, color="green",
             ha="left", va="center")
 
 
 
-    i=3
+    i=0
     p1 = rect[i]
     p2 = rect[(i + 1) % 4]
     mid = (p1 + p2) / 2
