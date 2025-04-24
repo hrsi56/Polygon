@@ -446,12 +446,6 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     ax.plot(rc[:, 0], rc[:, 1], "-.", lw=1, alpha=0.5, color="purple")
     HW = h*w
 
-    ax.text(*(rect[0]-[0,0.09] * (rect[3] - rect[0] ) - 0.1 * (rect[3] - rect[0] )), f"w={w:.2f}", fontsize=8,
-            ha="left", va="center" , color="purple")
-    ax.text(*(rect[0]-[0,0.12] * (rect[3] - rect[0] ) - 0.1 * (rect[3] - rect[0] )), f"h={h:.2f}", fontsize=8,
-            ha="left", va="center" , color="purple")
-    ax.text(*(rect[0]-[0,0.06] * (rect[3] - rect[0] ) - 0.1 * (rect[3] - rect[0] ) ), f"Area REC={HW:.2f}", fontsize=8,
-            ha="left", va="center" , color="purple")
 
     # --- כתיבת אורכי צלעות המלבן החיצוני בצד החיצוני שלו ---
     edge_labels = [w, h, w, h]  # אורכים לפי סדר הקודקודים
@@ -474,9 +468,28 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
                 ha="center", va="center",
                 bbox=dict(facecolor="white", edgecolor="none", alpha=0.6))
 
+    i=0
+    p1 = rect[i]
+    p2 = rect[(i + 1) % 4]
+    mid = (p1 + p2) / 2
+    edge_vec = p2 - p1
+    normal = np.array([-edge_vec[1], edge_vec[0]])
+    norm_len = np.linalg.norm(normal)
+    if norm_len > 0:
+        normal = normal / norm_len
+    offset = -0.09 * max(w, h)  # להזיז החוצה ב-0.05 מאורך הצלע הגדולה יותר
+    label_pos = mid + normal * offset
+
+    
+    ax.text(*(1.6 * label_pos  -  [0.4,0] * (rect[1]- rect[0]) ), f"w={w:.2f}", fontsize=8,
+            ha="left", va="center" , color="purple")
+    ax.text(*(1.9 * label_pos  -  [0.4,0] * (rect[1]- rect[0])), f"h={h:.2f}", fontsize=8,
+            ha="left", va="center" , color="purple")
+    ax.text(*(1.3 * label_pos -  [0.4,0] * (rect[1]- rect[0]) ), f"Area REC={HW:.2f}", fontsize=8,
+            ha="left", va="center" , color="purple")
 
     # ----- area label ------------------------------------------------------
-    ax.text(*(rect[0]-[0,0.03] * (rect[3] - rect[0] )  - 0.1 * (rect[3] - rect[0] ) ),
+    ax.text(*(label_pos-[0,0.09]  -  [0.4,0] * (rect[1]- rect[0]) ),
             f"Area Poligon = {shoelace_area(poly.pts):.2f}",
             fontsize=9, color="green",
             ha="left", va="center")
@@ -486,7 +499,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     font = FontProperties(fname="Pacifico-Regular.ttf")  # או שם אחר שהורדת
     tp = TextPath((0, 0), logo_text, size=0.03, prop=font)
 
-    ax.text(*(rect[1] - [0,0.12] * (rect[3] - rect[0]) -  [0.3,0] * (rect[1]- rect[0]) - 0.1 * (rect[3] - rect[0] )),"The App Created by:\nYarden Viktor Dejorno",fontsize=9, font=font)
+    ax.text(*(label_pos-[0,0.09]  + [0.4,0] * (rect[1]- rect[0])),"The App Created by:\nYarden Viktor Dejorno",fontsize=9, font=font)
 
     # אנכים מכל קודקוד של המצולע אל 2 הצלעות הקרובות של המלבן
 
