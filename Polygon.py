@@ -523,7 +523,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
             offset_vec = np.array([-offset_vec[1], offset_vec[0]])  # ניצב
             if np.linalg.norm(offset_vec) > 0:
                 offset_vec /= np.linalg.norm(offset_vec)
-            label_pos = mid + offset_vec * LABEL_SHIFT * 0.6 * min_len
+            label_pos = mid + offset_vec * LABEL_SHIFT * 0.1 * min_len
 
             if dist > 0.01:
 
