@@ -408,24 +408,6 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
             ax.text(*foot, f"h={alt['length']:.2f}", fontsize=6,
                     color="magenta", ha="left", va="bottom")
 
-    def draw_angle_text(ax, origin, vec1, vec2, label, radius, color="red", fontsize=7):
-        """
-        מציב תווית זווית בין שני וקטורים היוצאים מ־origin
-        """
-        u = vec1 / np.linalg.norm(vec1)
-        v = vec2 / np.linalg.norm(vec2)
-        bis = u + v
-        if np.linalg.norm(bis) < 1e-8:
-            bis = np.array([-u[1], u[0]])  # מקרה של 180°
-        else:
-            bis /= np.linalg.norm(bis)
-        pos = origin + bis * radius
-        ax.text(*pos, label, color=color, fontsize=fontsize,
-                ha="center", va="center")
-
-
-
-
     # ----- bounding rectangle ---------------------------------------------
     rc = np.vstack([rect, rect[0]])
     ax.plot(rc[:, 0], rc[:, 1], "-.", lw=1, alpha=0.5, color="purple")
@@ -438,29 +420,42 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     ax.text(*(rect[0]-[0,0.06] * (rect[3] - rect[0] )), f"Area REC={HW:.2f}", fontsize=8,
             ha="left", va="center" , color="purple")
 
+    # זוויות בין צלעות המצולע לצלעות המלבן
     for i in range(n):
         p1 = poly.pts[i]
         p2 = poly.pts[(i + 1) % n]
         edge_vec = p2 - p1
 
         if np.linalg.norm(edge_vec) < 1e-8:
-            continue
+            continue  # להימנע מחישוב עם צלע אפסית
 
         edge_dir = edge_vec / np.linalg.norm(edge_vec)
 
+        # צלעות המלבן (רוחב וגובה)
         rect_vecs = [rect[1] - rect[0], rect[3] - rect[0]]
         rect_vecs = [v / np.linalg.norm(v) for v in rect_vecs]
 
+        # חישוב זווית מינימלית בין צלע למצולע
         best_angle = None
-        best_vec = None
         for r_vec in rect_vecs:
             cos_theta = np.clip(np.dot(edge_dir, r_vec), -1, 1)
             angle = math.degrees(np.arccos(cos_theta))
             if best_angle is None or angle < best_angle:
                 best_angle = angle
-                best_vec = r_vec
 
-        draw_angle_text(ax, p1, edge_vec, best_vec, f"{best_angle:.1f}°", radius=0.2 * min_len)
+        # ציור טקסט הזווית באמצע הצלע
+        mid = 0.5 * (p1 + p2)
+        normal = np.array([-edge_vec[1], edge_vec[0]])
+        norm_len = np.linalg.norm(normal)
+        if norm_len > 0:
+            normal /= norm_len
+        offset = 0.17 * min_len
+        label_pos = mid + normal * offset
+
+        ax.text(*label_pos,
+                f"{best_angle:.1f}°",
+                fontsize=7, color="red",
+                ha="center", va="center")
 
     # --- כתיבת אורכי צלעות המלבן החיצוני בצד החיצוני שלו ---
     edge_labels = [w, h, w, h]  # אורכים לפי סדר הקודקודים
