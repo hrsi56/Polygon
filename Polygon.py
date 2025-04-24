@@ -494,6 +494,23 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
             fontsize=9, color="green",
             ha="left", va="center")
 
+
+
+    i=3
+    p1 = rect[i]
+    p2 = rect[(i + 1) % 4]
+    mid = (p1 + p2) / 2
+    edge_vec = p2 - p1
+    normal = np.array([-edge_vec[1], edge_vec[0]])
+    norm_len = np.linalg.norm(normal)
+    if norm_len > 0:
+        normal = normal / norm_len
+    offset = -0.09 * max(w, h)  # להזיז החוצה ב-0.05 מאורך הצלע הגדולה יותר
+    label_pos = mid + normal * offset
+
+
+
+    
     # --- לוגו טיפוגרפי של שם ---
     logo_text = "Created by Yarden Viktor Dejorno"
     font = FontProperties(fname="Pacifico-Regular.ttf")  # או שם אחר שהורדת
