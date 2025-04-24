@@ -361,19 +361,6 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
                 ha="left", va="center")
 
 
-    # ----- distances from polygon vertices to bounding rectangle corners -----
-    for p_idx, p in enumerate(poly.pts):
-        dists = [np.linalg.norm(p - corner) for corner in rect]
-        nearest_indices = np.argsort(dists)[:2]  # שני הקודקודים הקרובים ביותר
-        for ri in nearest_indices:
-            corner = rect[ri]
-            dist = dists[ri]
-            ax.plot([p[0], corner[0]], [p[1], corner[1]],
-                    linestyle="dotted", color="orange", lw=0.8)
-            mid = (p + corner) / 2
-            ax.text(*mid, f"{dist:.2f}", fontsize=6, color="orange",
-                    ha="center", va="center")
-
 
     return fig, diags, altitudes_data
 
