@@ -257,7 +257,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
 
     for corner in rect:
         dists = [np.linalg.norm(corner - p) for p in poly.pts]
-        nearest_indices = np.argsort(dists)  # שני הקרובים ביותר
+        nearest_indices = np.argsort(dists)[:2]  # שני הקרובים ביותר
         vecs = [poly.pts[idx] - corner for idx in nearest_indices]
 
         # נבדוק אם הוקטורים כמעט מקבילים
@@ -433,16 +433,9 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     font = FontProperties(fname="Pacifico-Regular.ttf")  # או שם אחר שהורדת
     tp = TextPath((0, 0), logo_text, size=0.03, prop=font)
 
-    # מיקום כמו שעשית - פינה תחתונה־ימנית, טיפה שמאלה ולמטה
-    base_pos = rect[1] - [0, 0.15] * (rect[3] - rect[0]) - [0.4, 0] * (rect[1] - rect[0])
-
-    # טרנספורמציה למיקום הלוגו על התמונה
-    transform = Affine2D().translate(*base_pos) + ax.transData
-
-    # הוספת הלוגו כ־patch
-    patch = PathPatch(tp, transform=transform,
-                      facecolor="purple", alpha=0.6, lw=0)
-    ax.add_patch(patch)
+    ax.text(*(rect[1] - [0,0.12] * (rect[3] - rect[0]) -  [0.3,0] * (rect[1]- rect[0])),"The App Created by:\nYarden Viktor Dejorno",fontsize=9,
+            ha="left", va="center", font=font,
+            bbox=dict(facecolor="white", edgecolor="none", alpha=0.6))
 
 
 
