@@ -1,5 +1,8 @@
 from __future__ import annotations
-
+from matplotlib.textpath import TextPath
+from matplotlib.patches import PathPatch
+from matplotlib.transforms import Affine2D
+from matplotlib.font_manager import FontProperties
 from scipy.optimize import minimize
 import datetime as dt
 import io
@@ -425,9 +428,21 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
             fontsize=9, color="green",
             ha="left", va="center")
 
+    # --- לוגו טיפוגרפי של שם ---
+    logo_text = "The App Created by:\nYarden Viktor Dejorno"
+    font = FontProperties(family="sans-serif", weight="bold")
+    tp = TextPath((0, 0), logo_text, size=0.2, prop=font)
 
-    ax.text(*(rect[1] - [0,0.12] * (rect[3] - rect[0]) -  [0.3,0] * (rect[1]- rect[0])),"App Created by:\nYarden Viktor Dejorno",fontsize=9,
-                ha="left", va="center")
+    # מיקום כמו שעשית - פינה תחתונה־ימנית, טיפה שמאלה ולמטה
+    base_pos = rect[1] - [0, 0.12] * (rect[3] - rect[0]) - [0.3, 0] * (rect[1] - rect[0])
+
+    # טרנספורמציה למיקום הלוגו על התמונה
+    transform = Affine2D().translate(*base_pos) + ax.transData
+
+    # הוספת הלוגו כ־patch
+    patch = PathPatch(tp, transform=transform,
+                      facecolor="purple", alpha=0.6, lw=0)
+    ax.add_patch(patch)
 
 
 
