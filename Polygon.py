@@ -429,7 +429,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
             ha="left", va="center")
 
     # --- לוגו טיפוגרפי של שם ---
-    logo_text = "The App Created by: \n Yarden Viktor Dejorno"
+    logo_text = "Created by Yarden Viktor Dejorno"
     font = FontProperties(fname="Pacifico-Regular.ttf")  # או שם אחר שהורדת
     tp = TextPath((0, 0), logo_text, size=0.02, prop=font)
 
