@@ -444,12 +444,12 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
                 best_angle = angle
 
         # ציור טקסט הזווית באמצע הצלע
-        mid = 0.1 * (p1 + p2)
+        mid = 0.5 * (p1 + p2)
         normal = np.array([-edge_vec[1], edge_vec[0]])
         norm_len = np.linalg.norm(normal)
         if norm_len > 0:
             normal /= norm_len
-        offset = 0.1 * np.linalg.norm(edge_vec)
+        offset = 0.17 * np.linalg.norm(edge_vec)
         label_pos = mid + normal * offset
 
         ax.text(*label_pos,
