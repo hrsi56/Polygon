@@ -12,6 +12,7 @@ import string
 import zipfile
 from dataclasses import dataclass
 from typing import List, Sequence , Sequence, NamedTuple
+from matplotlib.path import Path as MplPath  # לוודא שייבאת
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -260,6 +261,9 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
 
         return (ccw(p1, q1, q2) != ccw(p2, q1, q2)) and (ccw(p1, p2, q1) != ccw(p1, p2, q2))
 
+    # הכנה לבדיקה פנימית
+    polygon_path = MplPath(poly.pts)
+
     # --- distances from rect corners to polygon points, with smart edge comparison ---
     rect_edges = [rect[1] - rect[0], rect[3] - rect[0]]  # וקטורי צלעות: רוחב וגובה
 
@@ -268,13 +272,12 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
         nearest_indices = np.argsort(dists)
         vecs = [poly.pts[idx] - corner for idx in nearest_indices]
 
-        # נבדוק אם הוקטורים כמעט מקבילים
         if all(np.linalg.norm(v) > 1e-8 for v in vecs[:2]):
             u = vecs[0] / np.linalg.norm(vecs[0])
             v = vecs[1] / np.linalg.norm(vecs[1])
-            dot = abs(np.dot(u, v))  # ערך מוחלט – מקביל או אנטי-מקביל
+            dot = abs(np.dot(u, v))
             if dot > 0.998:
-                nearest_indices = [nearest_indices[0]]  # נשתמש רק בקודקוד הקרוב יותר
+                nearest_indices = [nearest_indices[0]]
 
         for idx in nearest_indices:
             p = poly.pts[idx]
@@ -283,21 +286,22 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
             if dist < 1e-8:
                 continue
 
-            # --- בדוק אם הקו חוצה את המצולע ---
+            # --- בדיקה אם חוצה צלע או נמצא כולו בתוך המצולע ---
             intersects = False
             for i in range(n):
                 a = poly.pts[i]
                 b = poly.pts[(i + 1) % n]
-                # דלג אם זו אותה נקודה או הצלע נושקת לפינה
                 if np.allclose(a, corner) or np.allclose(b, corner) or np.allclose(a, p) or np.allclose(b, p):
                     continue
                 if segments_intersect(corner, p, a, b):
                     intersects = True
                     break
-            if intersects:
-                continue  # אל תצייר את הקו הזה
 
-            # בדיקת התאמה לצלעות המלבן לפי קוסינוס הזווית
+            mid = 0.5 * (corner + p)
+            if intersects or polygon_path.contains_point(mid):
+                continue  # הקו לא תקף – חוצה או עובר דרך פנים המצולע
+
+            # --- אם עברנו את כל הבדיקות, נחשב ונצייר ---
             vec_norm = vec / dist
             best_edge_len = None
             best_cos = -1
@@ -308,7 +312,6 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
                     continue
                 edge_dir = edge_vec / edge_len
                 cos_angle = abs(np.dot(vec_norm, edge_dir))
-
                 if cos_angle > best_cos:
                     best_cos = cos_angle
                     best_edge_len = edge_len
@@ -316,10 +319,8 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
             if best_edge_len and dist < best_edge_len:
                 ax.plot([p[0], corner[0]], [p[1], corner[1]],
                         color="orange", lw=4, alpha=0.3)
-                mid = (p + corner) / 2
                 ax.text(*mid, f"{dist:.2f}", fontsize=6, color="black",
                         ha="center", va="center")
-
 
     # ----- diagonals -------------------------------------------------------
     diags = diagonals_info(poly)
