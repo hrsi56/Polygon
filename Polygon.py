@@ -360,7 +360,9 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
         ax.text(x + normal[0] * LABEL_SHIFT * min_len,
                 y + normal[1] * LABEL_SHIFT * min_len,
                 names[i], fontsize=9, weight="bold",
-                color="blue", ha="center", va="center")
+                color="blue", ha="center", va="center",
+                bbox=dict(facecolor="white", alpha=0.8,
+                          boxstyle="circle,pad=0.25"))
 
         mid = 0.5 * (poly.pts[i] + poly.pts[(i + 1) % n])
         edge = poly.pts[(i + 1) % n] - poly.pts[i]
@@ -385,15 +387,14 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
         edge_norm = np.array([-edge[1], edge[0]])
         if np.linalg.norm(edge_norm) > 0:
             edge_norm /= np.linalg.norm(edge_norm)
-        label_pos = base_point + edge_norm * LABEL_SHIFT * min_len * 1.2
+        label_pos = base_point + edge_norm * LABEL_SHIFT * min_len
 
         # ציור הזווית ליד תחילת הצלע
         ax.text(*label_pos,
                 f"∠{angle_to_rect:.1f}°",
                 fontsize=7,
                 color="orange",
-                ha="center", va="center",
-                bbox=dict(facecolor="white", alpha=0.6, edgecolor="orange"))
+                ha="center", va="center")
 
 
 
