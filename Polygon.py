@@ -293,7 +293,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
                 ax.plot([p[0], corner[0]], [p[1], corner[1]],
                         color="orange", lw=4, alpha=0.3)
                 mid = (p + corner) / 2
-                ax.text(*mid, f"{dist:.2f}", fontsize=6, color="orange",
+                ax.text(*mid, f"{dist:.2f}", fontsize=6, color="black",
                         ha="center", va="center")
 
 
