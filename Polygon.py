@@ -490,8 +490,31 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
 
     ax.text(*(rect[1] - [0,0.12] * (rect[3] - rect[0]) -  [0.3,0] * (rect[1]- rect[0])),"The App Created by:\nYarden Viktor Dejorno",fontsize=9, font=font)
 
+    # אנכים מכל קודקוד של המצולע אל 2 הצלעות הקרובות של המלבן
+    rect_sides = [(rect[i], rect[(i + 1) % 4]) for i in range(4)]
 
+    for pt in poly.pts:
+        distances = []
 
+        for p1, p2 in rect_sides:
+            edge_vec = p2 - p1
+            edge_len_sq = np.dot(edge_vec, edge_vec)
+            if edge_len_sq < 1e-8:
+                continue
+
+            t = np.dot(pt - p1, edge_vec) / edge_len_sq
+            t_clamped = np.clip(t, 0, 1)
+            foot = p1 + t_clamped * edge_vec
+            dist = np.linalg.norm(pt - foot)
+
+            distances.append((dist, foot, (p1, p2)))
+
+        # בחר את שתי הצלעות הכי קרובות
+        distances.sort(key=lambda x: x[0])
+        for i in range(2):
+            _, foot, (p1, p2) = distances[i]
+            ax.plot([pt[0], foot[0]], [pt[1], foot[1]],
+                    linestyle="dashed", linewidth=0.8, color="green", alpha=0.7)
 
 
     return fig, diags, altitudes_data
