@@ -245,7 +245,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
 
     ax.set_aspect("equal")
     ax.axis("off")
-    ax.plot(pts_closed[:, 0], pts_closed[:, 1], "-o", lw=1.4, color= "green" , alpha=0.6 )
+    ax.plot(pts_closed[:, 0], pts_closed[:, 1], "-o", lw=1.4, color= "green" , alpha=1 )
 
     min_len = min(poly.lengths)
 
