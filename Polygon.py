@@ -481,15 +481,15 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     label_pos = mid + normal * offset
 
     
-    ax.text(*([0,1.06] * label_pos  ), f"w={w:.2f}", fontsize=8,
+    ax.text(*([2,1.06] * label_pos  ), f"w={w:.2f}", fontsize=8,
             ha="left", va="center" , color="purple")
-    ax.text(*([0,1.09] * label_pos  ), f"h={h:.2f}", fontsize=8,
+    ax.text(*([2,1.09] * label_pos  ), f"h={h:.2f}", fontsize=8,
             ha="left", va="center" , color="purple")
-    ax.text(*([0,1.03] * label_pos ), f"Area REC={HW:.2f}", fontsize=8,
+    ax.text(*([2,1.03] * label_pos ), f"Area REC={HW:.2f}", fontsize=8,
             ha="left", va="center" , color="purple")
 
     # ----- area label ------------------------------------------------------
-    ax.text(*([0,1] * label_pos  ),
+    ax.text(*([2,1] * label_pos  ),
             f"Area Poligon = {shoelace_area(poly.pts):.2f}",
             fontsize=9, color="green",
             ha="left", va="center")
@@ -516,7 +516,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     font = FontProperties(fname="Pacifico-Regular.ttf")  # או שם אחר שהורדת
     tp = TextPath((0, 0), logo_text, size=0.03, prop=font)
 
-    ax.text(*([-0.3,1] * label_pos  ),"The App Created by:\nYarden Viktor Dejorno",fontsize=9, font=font)
+    ax.text(*([0.4,1] * label_pos  ),"The App Created by:\nYarden Viktor Dejorno",fontsize=9, font=font)
 
     # אנכים מכל קודקוד של המצולע אל 2 הצלעות הקרובות של המלבן
 
