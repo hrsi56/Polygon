@@ -362,18 +362,45 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
                 ha="left", va="center")
 
 
-    # ----- distances from rectangle corners to closest polygon vertices -----
+
+    # --- distances from rect corners to nearest polygon points, with smart edge comparison ---
+    rect_edges = [rect[1] - rect[0], rect[3] - rect[0]]  # וקטורי צלעות: רוחב וגובה
+
     for corner in rect:
         dists = [np.linalg.norm(corner - p) for p in poly.pts]
-        nearest_indices = np.argsort(dists)[:2]  # שני הקודקודים הקרובים ביותר של המצולע
+        nearest_indices = np.argsort(dists)[:2]  # שני הקרובים ביותר
+
         for idx in nearest_indices:
             p = poly.pts[idx]
-            dist = dists[idx]
-            ax.plot([p[0], corner[0]], [p[1], corner[1]],
-                    linestyle="dotted", color="orange", lw=0.8, alpha=0.5)
-            mid = (p + corner) / 2
-            ax.text(*mid, f"{dist:.2f}", fontsize=6, color="orange",
-                    ha="center", va="center")
+            vec = p - corner
+            dist = np.linalg.norm(vec)
+            if dist < 1e-8:
+                continue
+
+            # בדיקת התאמה לצלעות המלבן לפי קוסינוס הזווית (מכפלה סקלרית מנורמלת)
+            vec_norm = vec / dist
+            best_edge_len = None
+            best_cos = -1  # ערך נמוך מאוד כדי להבטיח שתמיד נמצא טוב יותר
+
+            for edge_vec in rect_edges:
+                edge_len = np.linalg.norm(edge_vec)
+                if edge_len < 1e-2:
+                    continue
+                edge_dir = edge_vec / edge_len
+                cos_angle = abs(np.dot(vec_norm, edge_dir))  # כמה הוקטורים מיושרים
+
+                if cos_angle > best_cos:
+                    best_cos = cos_angle
+                    best_edge_len = edge_len
+
+            # תנאי סינון: אם המרחק קצר יותר מאורך הצלע המתאימה
+            if best_edge_len and dist < best_edge_len:
+                ax.plot([p[0], corner[0]], [p[1], corner[1]],
+                        linestyle="dotted", color="orange", lw=0.8, alpha=0.5)
+                mid = (p + corner) / 2
+                ax.text(*mid, f"{dist:.2f}", fontsize=6, color="orange",
+                        ha="center", va="center")
+
 
     return fig, diags, altitudes_data
 
