@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
 import matplotlib.image as mpimg
+from scipy.stats import alpha
 
 TOL = 1e-6
 LABEL_SHIFT = 0.05        # outward label offset (fraction of min side)
@@ -360,6 +361,21 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     ax.text(*(rect[1] - [0,0.06] * (rect[3] - rect[0]) -  [0.4,0] * (rect[1]- rect[0])),"Created by:\nYarden Viktor Dejorno",fontsize=9,
                 ha="left", va="center")
 
+
+
+    # ----- distances from polygon vertices to bounding rectangle corners -----
+    for corner in rect:
+        dists =  [np.sqrt(np.square(corner) - np.square(p)) for p_idx, p in enumerate(poly.pts)]
+        nearest_indices = np.argsort(dists)[:2]  # שני הקודקודים הקרובים ביותר
+        for p_idx, p in enumerate(poly.pts):
+            corner = poly.pts[p_idx]
+            dist = dists[p_idx]
+            if dist < np.sqrt(np.square(rect[1]) - np.square([0])) :
+                ax.plot([p[0], corner[0]], [p[1], corner[1]],
+                        linestyle="dotted", color="orange", lw=0.8, alpha = 0.5)
+                mid = (p + corner) / 2
+                ax.text(*mid, f"{dist:.2f}", fontsize=6, color="orange",
+                        ha="center", va="center")
 
 
     return fig, diags, altitudes_data
