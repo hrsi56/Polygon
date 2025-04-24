@@ -481,15 +481,15 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     label_pos = mid + normal * offset
 
     
-    ax.text(*([0,1.06] * label_pos  -  [0.5,0] * (rect[1]- rect[0]) ), f"w={w:.2f}", fontsize=8,
+    ax.text(*([0,1.06] * label_pos  ), f"w={w:.2f}", fontsize=8,
             ha="left", va="center" , color="purple")
-    ax.text(*([0,1.09] * label_pos  -  [0.5,0] * (rect[1]- rect[0])), f"h={h:.2f}", fontsize=8,
+    ax.text(*([0,1.09] * label_pos  ), f"h={h:.2f}", fontsize=8,
             ha="left", va="center" , color="purple")
-    ax.text(*([0,1.03] * label_pos -  [0.5,0] * (rect[1]- rect[0]) ), f"Area REC={HW:.2f}", fontsize=8,
+    ax.text(*([0,1.03] * label_pos ), f"Area REC={HW:.2f}", fontsize=8,
             ha="left", va="center" , color="purple")
 
     # ----- area label ------------------------------------------------------
-    ax.text(*([0,1] * label_pos  -  [0.5,0] * (rect[1]- rect[0]) ),
+    ax.text(*([0,1] * label_pos  ),
             f"Area Poligon = {shoelace_area(poly.pts):.2f}",
             fontsize=9, color="green",
             ha="left", va="center")
