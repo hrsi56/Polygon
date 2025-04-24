@@ -384,7 +384,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
 
             for edge_vec in rect_edges:
                 edge_len = np.linalg.norm(edge_vec)
-                if edge_len < 1e-2:
+                if edge_len < 0.5:
                     continue
                 edge_dir = edge_vec / edge_len
                 cos_angle = abs(np.dot(vec_norm, edge_dir))  # כמה הוקטורים מיושרים
