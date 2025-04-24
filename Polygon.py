@@ -426,7 +426,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
             ha="left", va="center")
 
 
-    ax.text(*(rect[1] - [0,0.1] * (rect[3] - rect[0]) -  [0.3,0] * (rect[1]- rect[0])),"Created by:\nYarden Viktor Dejorno",fontsize=9,
+    ax.text(*(rect[1] - [0,0.12] * (rect[3] - rect[0]) -  [0.3,0] * (rect[1]- rect[0])),"Created by:\nYarden Viktor Dejorno",fontsize=9,
                 ha="left", va="center")
 
 
