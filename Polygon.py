@@ -328,10 +328,10 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     for d in diags:
         p1, p2 = poly.pts[d["i"]], poly.pts[d["j"]]
         ax.plot([p1[0], p2[0]], [p1[1], p2[1]],
-                "--", lw=0.8, color="gray", alpha=0.6)
+                "--", lw=0.8, color="brown", alpha=0.6)
         mid = 0.5 * (p1 + p2)
         ax.text(*mid, f"{d['length']:.2f}",
-                fontsize=6, color="gray",
+                fontsize=6, color="brown",
                 ha="center", va="center")
 
         # endpoint i
