@@ -21,7 +21,7 @@ import matplotlib.image as mpimg
 from scipy.stats import alpha
 
 TOL = 1e-6
-LABEL_SHIFT = 0.05        # outward label offset (fraction of min side)
+LABEL_SHIFT = 0.04    # outward label offset (fraction of min side)
 
 
 # ────── geometry helpers ──────────────────────────────────────────────────
@@ -420,7 +420,7 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
         ax.text(
             *txt,
             f"{poly.angles_int[i]:.1f}°",
-            fontsize=7,
+            fontsize=9,
             color="red",
             ha="center",
             va="center",
