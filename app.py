@@ -227,11 +227,11 @@ def draw_polygon_fig(poly: PolygonData, show_alt: bool):
         p1, p2 = poly.pts[d['i']], poly.pts[d['j']]
         ax.plot([p1[0], p2[0]], [p1[1], p2[1]], '--', lw=0.8, color='brown', alpha=0.6)
         mid = 0.5 * (p1 + p2)
-        ax.text(mid[0], mid[1], f'{d['length']:.2f}', fontsize=6, color='brown', ha='center', va='center')
+        ax.text(mid[0], mid[1], f"{d['length']:.2f}", fontsize=6, color='brown', ha='center', va='center')
         vec_i = (p2 - p1) / np.linalg.norm(p2 - p1)
-        ax.text(*(p1 + vec_i * 0.1 * min_len), f'{d['end_i']['angle']:.1f}°\n{d['end_i']['side']}', fontsize=5, color='brown', ha='center', va='center')
+        ax.text(*(p1 + vec_i * 0.1 * min_len), f"{d['end_i']['angle']:.1f}°\n{d['end_i']['side']}", fontsize=5, color='brown', ha='center', va='center')
         vec_j = (p1 - p2) / np.linalg.norm(p1 - p2)
-        ax.text(*(p2 + vec_j * 0.1 * min_len), f'{d['end_j']['angle']:.1f}°\n{d['end_j']['side']}', fontsize=5, color='brown', ha='center', va='center')
+        ax.text(*(p2 + vec_j * 0.1 * min_len), f"{d['end_j']['angle']:.1f}°\n{d['end_j']['side']}", fontsize=5, color='brown', ha='center', va='center')
     for i, (x, y) in enumerate(poly.pts):
         prev_v = poly.pts[i] - poly.pts[i - 1]
         next_v = poly.pts[(i + 1) % n] - poly.pts[i]
