@@ -481,25 +481,35 @@ def draw_polygon(poly: PolygonData, show_altitudes: bool):
     label_pos = mid + normal * offset
 
     
-    ax.text(*([0,1.06] * label_pos  ), f"w={w:.2f}", fontsize=8,
-            ha="left", va="center" , color="purple")
-    ax.text(*([0,1.09] * label_pos  ), f"h={h:.2f}", fontsize=8,
-            ha="left", va="center" , color="purple")
-    ax.text(*([0,1.03] * label_pos ), f"Area REC={HW:.2f}", fontsize=8,
-            ha="left", va="center" , color="purple")
+    ax.text(*([2,1.06] * label_pos  ), f"Area Poligon = {shoelace_area(poly.pts):.2f}\nArea REC={HW:.2f}\nw={w:.2f}\nh={h:.2f}", fontsize=8,
+            ha="left", va="center" , color="black")
 
-    # ----- area label ------------------------------------------------------
-    ax.text(*([0,1] * label_pos  ),
-            f"Area Poligon = {shoelace_area(poly.pts):.2f}",
-            fontsize=9, color="green",
-            ha="left", va="center")
 
+
+
+
+
+    i=0
+    p1 = rect[i]
+    p2 = rect[(i + 1) % 4]
+    mid = (p1 + p2) / 2
+    edge_vec = p2 - p1
+    normal = np.array([-edge_vec[1], edge_vec[0]])
+    norm_len = np.linalg.norm(normal)
+    if norm_len > 0:
+        normal = normal / norm_len
+    offset = -0.09 * max(w, h)  # להזיז החוצה ב-0.05 מאורך הצלע הגדולה יותר
+    label_pos = mid + normal * offset
+
+
+
+    
     # --- לוגו טיפוגרפי של שם ---
     logo_text = "Created by Yarden Viktor Dejorno"
     font = FontProperties(fname="Pacifico-Regular.ttf")  # או שם אחר שהורדת
     tp = TextPath((0, 0), logo_text, size=0.03, prop=font)
 
-    ax.text(*([0,1] * label_pos-[0,0.09]  + [0.4,0] * (rect[1]- rect[0])),"The App Created by:\nYarden Viktor Dejorno",fontsize=9, font=font)
+    ax.text(*([0.4,1.1] * label_pos  ),"The App Created by:\nYarden Viktor Dejorno",fontsize=9, font=font)
 
     # אנכים מכל קודקוד של המצולע אל 2 הצלעות הקרובות של המלבן
 
