@@ -7,3 +7,5 @@ plotly
 pandas
 scikit-learn
 seaborn
+pillow
+gunicorn
