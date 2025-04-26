@@ -437,6 +437,7 @@ def download_zip(n_clicks, n, lengths, show_angles, angles, add_extra):
     zip_buf.seek(0)
     return dcc.send_bytes(lambda: zip_buf.getvalue(), filename=f"{base}.zip")
 
+server = app.server
+
 if __name__ == '__main__':
     app.run_server(debug=True)
-    server = app.server
