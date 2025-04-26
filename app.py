@@ -439,3 +439,4 @@ def download_zip(n_clicks, n, lengths, show_angles, angles, add_extra):
 
 if __name__ == '__main__':
     app.run_server(debug=True)
+    server = app.server
