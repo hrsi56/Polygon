@@ -205,9 +205,9 @@ def triangle_altitudes(pts: np.ndarray):
 # ────── ציור המצולע ─────────────────────────────────────
 def draw_polygon_fig(poly: PolygonData, show_alt: bool):
     rect, w, h = bounding_rect(poly.pts)
-    img = mpimg.imread('assets/Subject.PNG')  # רקע מותאם
-    fig, ax = plt.subplots(figsize=(7, 7))
-    ax.imshow(img, extent=[rect[0][0], rect[1][0], rect[0][1], rect[2][1]], alpha=0.7)
+    img = mpimg.imread('assets/Subject.PNG')  # רקע
+    fig, ax = plt.subplots(figsize=(10, 10))  # גודל קנבס גדול יותר
+    ax.imshow(img, extent=[rect[0][0], rect[1][0], rect[0][1], rect[2][1]], alpha=0.6)
 
     n = len(poly.pts)
     names = poly.names
@@ -215,69 +215,74 @@ def draw_polygon_fig(poly: PolygonData, show_alt: bool):
 
     ax.set_aspect('equal')
     ax.axis('off')
-    ax.plot(pts_closed[:, 0], pts_closed[:, 1], '-o', lw=1.4, color='green', alpha=1)
-
+    ax.plot(pts_closed[:, 0], pts_closed[:, 1], '-o', lw=2, color='green', alpha=1)
     min_len = min(poly.lengths)
 
-    # ציור קווים לפינות המלבן
-    polygon_path = MplPath(poly.pts)
-    rect_edges = [rect[1] - rect[0], rect[3] - rect[0]]
+    # --- ציור המלבן המקיף ---
+    rc = np.vstack([rect, rect[0]])
+    ax.plot(rc[:, 0], rc[:, 1], "-.", lw=1.5, alpha=0.6, color="purple")
 
-    def segments_intersect(p1, p2, q1, q2):
-        def ccw(a, b, c):
-            return (c[1] - a[1]) * (b[0] - a[0]) > (b[1] - a[1]) * (c[0] - a[0])
-        return (ccw(p1, q1, q2) != ccw(p2, q1, q2)) and (ccw(p1, p2, q1) != ccw(p1, p2, q2))
+    # כתיבת אורכי צלעות המלבן
+    edge_labels = [w, h, w, h]
+    for i in range(4):
+        p1 = rect[i]
+        p2 = rect[(i + 1) % 4]
+        mid = (p1 + p2) / 2
+        normal = np.array([-(p2 - p1)[1], (p2 - p1)[0]])
+        normal /= np.linalg.norm(normal)
+        offset = 0.08 * max(w, h)
+        label_pos = mid + normal * offset
 
-    for corner in rect:
-        dists = [np.linalg.norm(corner - p) for p in poly.pts]
-        nearest = np.argsort(dists)
-        vecs = [poly.pts[i] - corner for i in nearest]
+        ax.text(*label_pos,
+                f"{edge_labels[i]:.2f}",
+                fontsize=8,
+                color="purple",
+                ha="center", va="center",
+                bbox=dict(facecolor="white", alpha=0.7, edgecolor="none"))
 
-        if all(np.linalg.norm(v) > 1e-8 for v in vecs[:2]):
-            u = vecs[0] / np.linalg.norm(vecs[0])
-            v = vecs[1] / np.linalg.norm(vecs[1])
-            if abs(np.dot(u, v)) > 0.998:
-                nearest = [nearest[0]]
+    # --- שטח מצולע ומלבן ---
+    area_poly = shoelace_area(poly.pts)
+    area_rect = w * h
+    efficiency = (area_poly / area_rect) * 100 if area_rect > 0 else 0
 
-        for i in nearest:
-            p = poly.pts[i]
-            vec = p - corner
-            dist = np.linalg.norm(vec)
-            if dist < 1e-8:
+    ax.text(rect[0][0], rect[2][1] + 0.1 * h,
+            f"Polygon Area = {area_poly:.2f}\n"
+            f"Rectangle Area = {area_rect:.2f}\n"
+            f"Width = {w:.2f}, Height = {h:.2f}\n"
+            f"Efficiency = {efficiency:.1f}%",
+            fontsize=10,
+            color="black",
+            ha="left", va="bottom",
+            bbox=dict(facecolor="white", alpha=0.7, edgecolor="gray"))
+
+    # --- קווים מנקודות המצולע לצלעות המלבן ---
+    rect_sides = [(rect[i], rect[(i + 1) % 4]) for i in range(4)]
+    for pt in poly.pts:
+        distances = []
+        for p1, p2 in rect_sides:
+            edge_vec = p2 - p1
+            edge_len_sq = np.dot(edge_vec, edge_vec)
+            if edge_len_sq < 1e-8:
                 continue
+            t = np.dot(pt - p1, edge_vec) / edge_len_sq
+            t = np.clip(t, 0, 1)
+            foot = p1 + t * edge_vec
+            dist = np.linalg.norm(pt - foot)
+            distances.append((dist, foot))
 
-            intersects = False
-            for k in range(n):
-                a = poly.pts[k]
-                b = poly.pts[(k + 1) % n]
-                if np.allclose(a, corner) or np.allclose(b, corner) or np.allclose(a, p) or np.allclose(b, p):
-                    continue
-                if segments_intersect(corner, p, a, b):
-                    intersects = True
-                    break
+        distances.sort(key=lambda x: x[0])
+        for i in range(2):  # חיבור ל-2 צלעות הכי קרובות
+            dist, foot = distances[i]
+            ax.plot([pt[0], foot[0]], [pt[1], foot[1]], linestyle='dashed', color='orange', lw=1, alpha=0.5)
+            mid = 0.5 * (pt + foot)
+            offset_vec = np.array([- (foot - pt)[1], (foot - pt)[0]])
+            if np.linalg.norm(offset_vec) > 0:
+                offset_vec /= np.linalg.norm(offset_vec)
+            label_pos = mid + offset_vec * 0.02 * max(w, h)
+            if dist > 0.01:
+                ax.text(*label_pos, f"{dist:.2f}", fontsize=6, color="orange", ha="center", va="center")
 
-            mid = 0.5 * (corner + p)
-            if intersects or polygon_path.contains_point(mid):
-                continue
-
-            vec_norm = vec / dist
-            best_edge_len = None
-            best_cos = -1
-            for edge_vec in rect_edges:
-                elen = np.linalg.norm(edge_vec)
-                if elen < 0.5:
-                    continue
-                edir = edge_vec / elen
-                cang = abs(np.dot(vec_norm, edir))
-                if cang > best_cos:
-                    best_cos = cang
-                    best_edge_len = elen
-
-            if best_edge_len and dist < best_edge_len:
-                ax.plot([p[0], corner[0]], [p[1], corner[1]], color='orange', lw=4, alpha=0.3)
-                ax.text(*(0.5 * (p + corner)), f"{dist:.2f}", fontsize=6, color='black', ha='center', va='center')
-
-    # ציור אלכסונים
+    # --- אלכסונים ---
     diags = diagonals_info(poly)
     for d in diags:
         p1, p2 = poly.pts[d['i']], poly.pts[d['j']]
@@ -285,19 +290,17 @@ def draw_polygon_fig(poly: PolygonData, show_alt: bool):
         mid = 0.5 * (p1 + p2)
         ax.text(mid[0], mid[1], f"{d['length']:.2f}", fontsize=6, color='brown', ha='center', va='center')
 
-    # תוויות קודקודים
+    # --- קודקודים וצלעות ---
     for i, (x, y) in enumerate(poly.pts):
         prev_v = poly.pts[i] - poly.pts[i - 1]
         next_v = poly.pts[(i + 1) % n] - poly.pts[i]
         norm_v = np.array([-(prev_v[1] + next_v[1]), prev_v[0] + next_v[0]])
         if np.linalg.norm(norm_v):
-            norm_v = norm_v / np.linalg.norm(norm_v)
+            norm_v /= np.linalg.norm(norm_v)
         ax.text(x + norm_v[0] * LABEL_SHIFT * min_len,
                 y + norm_v[1] * LABEL_SHIFT * min_len,
                 names[i], fontsize=9, weight='bold', color='blue', ha='center', va='center')
 
-    # תוויות אורכים
-    for i in range(n):
         mid = 0.5 * (poly.pts[i] + poly.pts[(i + 1) % n])
         edge = poly.pts[(i + 1) % n] - poly.pts[i]
         en = np.array([-edge[1], edge[0]]) / np.linalg.norm(edge)
@@ -305,7 +308,7 @@ def draw_polygon_fig(poly: PolygonData, show_alt: bool):
                 f"{poly.lengths[i]:.2f}", fontsize=7,
                 bbox=dict(facecolor='green', alpha=0.15, edgecolor='none'), ha='center', va='center')
 
-    # תוויות זוויות פנימיות
+    # --- זוויות פנימיות ---
     for i in range(n):
         p = poly.pts[i]
         v1 = poly.pts[i - 1] - p
@@ -315,7 +318,7 @@ def draw_polygon_fig(poly: PolygonData, show_alt: bool):
         text_pos = p + bis * (0.23 * min_len)
         ax.text(text_pos[0], text_pos[1], f"{poly.angles_int[i]:.1f}°", fontsize=9, color='red', ha='center', va='center')
 
-    # גבהים במשולש
+    # --- גבהים במשולש ---
     alt_data = None
     if show_alt and n == 3:
         alt_data = triangle_altitudes(poly.pts)
@@ -325,17 +328,21 @@ def draw_polygon_fig(poly: PolygonData, show_alt: bool):
             ax.plot([A[0], foot[0]], [A[1], foot[1]], ':', color='magenta', lw=1.2)
             ax.text(foot[0], foot[1], f"h={alt['length']:.2f}", fontsize=6, color='magenta', ha='left', va='bottom')
 
+    # --- חתימה יפה ---
+    try:
+        font = FontProperties(fname="assets/Pacifico-Regular.ttf")
+        ax.text(rect[0][0] + 0.05 * w, rect[0][1] - 0.15*h,
+                "Created by Yarden Viktor Dejorno",
+                fontsize=14,
+                fontproperties=font,
+                color='gray',
+                ha='left',
+                va='top',
+                bbox=dict(facecolor="white", alpha=0.5, edgecolor="none"))
+    except Exception as e:
+        pass  # אין פונט? נמשיך בלי להתרסק
+
     return fig, diags, alt_data
-
-
-    font = FontProperties(fname="assets/Pacifico-Regular.ttf")
-    ax.text(rect[0][0] + 0.05 * w, rect[2][1] + 0.05 * h,
-            "Created by Yarden Viktor Dejorno",
-            fontsize=10,
-            fontproperties=font,
-            color='black',
-            ha='left',
-            va='bottom')
 
 # ────── Layout ראשי ─────────────────────────────────────
 
@@ -498,7 +505,7 @@ def draw_polygon_callback(n_clicks, n, lengths, show_angles, angles, add_extra):
 # ────── הורדת ZIP ─────────────────────────────────────
 @app.callback(
     Output('download-zip', 'data'),
-    Input('download-button', 'n_clicks'),
+    Input('download-button', 'n_clicks'),   # שים לב! id רגיל
     State('num-sides', 'value'),
     State({'type': 'length', 'index': ALL}, 'value'),
     State('provide-angles', 'value'),
@@ -507,6 +514,9 @@ def draw_polygon_callback(n_clicks, n, lengths, show_angles, angles, add_extra):
     prevent_initial_call=True
 )
 def download_zip(n_clicks, n, lengths, show_angles, angles, add_extra):
+    if not n_clicks:
+        return dash.no_update
+
     if show_angles and 'show' in show_angles:
         if add_extra and 'extra' in add_extra:
             poly = build_polygon_with_extra(lengths, angles)
@@ -537,6 +547,7 @@ def download_zip(n_clicks, n, lengths, show_angles, angles, add_extra):
 
     txt = json.dumps({'Numerical data': num_data, 'Diagonals': diag_data}, indent=2).encode()
 
+    # יצירת קבצים
     png_buf = io.BytesIO()
     fig.savefig(png_buf, format='png', dpi=300, bbox_inches='tight')
     png_buf.seek(0)
@@ -549,6 +560,7 @@ def download_zip(n_clicks, n, lengths, show_angles, angles, add_extra):
     fig.savefig(svg_buf, format='svg', bbox_inches='tight')
     svg_buf.seek(0)
 
+    # יצירת ZIP
     zip_buf = io.BytesIO()
     with zipfile.ZipFile(zip_buf, 'w', zipfile.ZIP_DEFLATED) as zf:
         ts = dt.datetime.now().strftime('%Y%m%d_%H%M')
@@ -559,6 +571,7 @@ def download_zip(n_clicks, n, lengths, show_angles, angles, add_extra):
         zf.writestr(f"{base}.svg", svg_buf.getvalue())
 
     zip_buf.seek(0)
+
     return dcc.send_bytes(lambda: zip_buf.getvalue(), filename=f"{base}.zip")
 
 # ────── הרצת האפליקציה ─────────────────────────────────────
