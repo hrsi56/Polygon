@@ -1,0 +1,40 @@
+body {
+    background-color: #f8f9fa;
+}
+
+h1, h5 {
+    animation: fadeIn 1.5s ease-in;
+}
+
+.card {
+    border-radius: 12px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+input[type="number"], textarea {
+    border-radius: 8px;
+    border: 1px solid #ced4da;
+    padding: 6px;
+}
+
+img {
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+/* אנימציה */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* מעברוני צבע יפים לכפתורים */
+.btn-success {
+    background: linear-gradient(45deg, #28a745, #218838);
+    border: none;
+}
+
+.btn-primary {
+    background: linear-gradient(45deg, #007bff, #0056b3);
+    border: none;
+}
