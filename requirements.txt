@@ -9,3 +9,4 @@ scikit-learn
 seaborn
 pillow
 gunicorn
+dash-bootstrap-components

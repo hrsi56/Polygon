@@ -372,7 +372,7 @@ app.layout = dbc.Container([
             ),
 
             dbc.Button('Draw Polygon', id='draw-button', color="success", className="w-100 mb-3 btn-lg"),
-            dbc.Button('Download ZIP', id='download-button', color="primary", className="w-100 btn-lg"),
+            html.Div(id='download-button-container'),  # נעדכן את כפתור ההורדה אחרי ציור
 
             dcc.Download(id='download-zip'),
         ], md=4),
@@ -385,7 +385,8 @@ app.layout = dbc.Container([
                             id="loading-polygon",
                             type="circle",
                             children=html.Img(id='polygon-image', style={'width': '100%', 'height': 'auto'})
-                        )                    ]),
+                        )
+                    ]),
                     html.Hr(),
                     html.H5('Numerical Data', className="text-center"),
                     html.Div(id='numeric-data',
@@ -398,6 +399,9 @@ app.layout = dbc.Container([
                                     'borderRadius': '8px', 'boxShadow': '0px 2px 5px rgba(0,0,0,0.05)'}),
                 ])
             ], className="shadow p-3 bg-white rounded")
+        ], md=8),
+    ])
+], fluid=True)
 
 # ────── עדכון שדות אורך ─────────────────────────────────────
 @app.callback(
