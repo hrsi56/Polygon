@@ -223,6 +223,7 @@ def draw_polygon_fig(poly: PolygonData, show_alt: bool):
     ax.plot(rc[:, 0], rc[:, 1], "-.", lw=1.5, alpha=0.6, color="purple")
 
     # כתיבת אורכי צלעות המלבן
+    edge_labels = [w, h, w, h]
     for i in range(4):
         p1 = rect[i]
         p2 = rect[(i + 1) % 4]
