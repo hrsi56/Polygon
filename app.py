@@ -343,7 +343,7 @@ app.layout = dbc.Container([
     dbc.Row([
         dbc.Col([
             html.H1('📐 Polygon Drawer', className="text-center mt-4"),
-            html.H5('לינקו - תמורת טובות הנאה.', className="text-center mb-4 text-muted"),
+            html.H5('לינקו - תמורת טובות הנעה.', className="text-center mb-4 text-muted"),
         ])
     ]),
 
