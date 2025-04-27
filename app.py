@@ -223,22 +223,26 @@ def draw_polygon_fig(poly: PolygonData, show_alt: bool):
     ax.plot(rc[:, 0], rc[:, 1], "-.", lw=1.5, alpha=0.6, color="purple")
 
     # כתיבת אורכי צלעות המלבן
-    edge_labels = [w, h, w, h]
     for i in range(4):
         p1 = rect[i]
         p2 = rect[(i + 1) % 4]
         mid = (p1 + p2) / 2
-        normal = np.array([-(p2 - p1)[1], (p2 - p1)[0]])
-        normal /= np.linalg.norm(normal)
-        offset = 0.08 * max(w, h)
+
+        # הזחה קלה פנימה
+        edge_vec = p2 - p1
+        normal = np.array([-edge_vec[1], edge_vec[0]])
+        if np.linalg.norm(normal):
+            normal = normal / np.linalg.norm(normal)
+        offset = -0.05 * max(w, h)  # שלילי => פנימה למלבן
+
         label_pos = mid + normal * offset
 
         ax.text(*label_pos,
                 f"{edge_labels[i]:.2f}",
-                fontsize=8,
+                fontsize=9,
                 color="purple",
                 ha="center", va="center",
-                bbox=dict(facecolor="white", alpha=0.7, edgecolor="none"))
+                bbox=dict(facecolor="white", alpha=0.6, edgecolor="none"))
 
     # --- שטח מצולע ומלבן ---
     area_poly = shoelace_area(poly.pts)
@@ -307,6 +311,38 @@ def draw_polygon_fig(poly: PolygonData, show_alt: bool):
         ax.text(*(mid + en * LABEL_SHIFT * min_len),
                 f"{poly.lengths[i]:.2f}", fontsize=7,
                 bbox=dict(facecolor='green', alpha=0.15, edgecolor='none'), ha='center', va='center')
+
+        edge_dir = edge / np.linalg.norm(edge)
+        horizontal = np.array([1.0, 0.0])
+        vertical = np.array([0.0, 1.0])
+
+        angle_h = math.degrees(math.acos(np.clip(abs(np.dot(edge_dir, horizontal)), -1, 1)))
+        angle_v = math.degrees(math.acos(np.clip(abs(np.dot(edge_dir, vertical)), -1, 1)))
+        angle_to_rect = min(angle_h, angle_v)
+
+        # מיקום: קרוב לקודקוד תחילת הצלע
+        base_point = poly.pts[i]
+        # כיוון הצלע בניצב – להזחה כלפי חוץ
+        edge_norm = np.array([-edge[1], edge[0]])
+        if np.linalg.norm(edge_norm) > 0:
+            edge_norm /= np.linalg.norm(edge_norm)
+        # סיבוב של הווקטור ° עם כיוון השעון
+        theta = math.radians(75)
+        rotation_matrix = np.array([
+            [math.cos(theta), math.sin(theta)],
+            [-math.sin(theta), math.cos(theta)]
+        ])
+        rotated_vec = rotation_matrix @ edge_norm
+
+        # מיקום הטקסט אחרי סיבוב
+        label_pos = base_point + rotated_vec * LABEL_SHIFT * min_len * 3.5
+
+        # ציור הזווית ליד תחילת הצלע
+        ax.text(*label_pos,
+                f"∠{angle_to_rect:.1f}°",
+                fontsize=7,
+                color="green",
+                ha="center", va="center")
 
     # --- זוויות פנימיות ---
     for i in range(n):
