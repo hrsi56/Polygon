@@ -206,7 +206,7 @@ def triangle_altitudes(pts: np.ndarray):
 def draw_polygon_fig(poly: PolygonData, show_alt: bool):
     rect, w, h = bounding_rect(poly.pts)
     img = mpimg.imread('assets/Subject.PNG')  # רקע
-    fig, ax = plt.subplots(figsize=(10, 10))  # גודל קנבס גדול יותר
+    fig, ax = plt.subplots(figsize=(6, 6))  # גודל קנבס גדול יותר
     ax.imshow(img, extent=[rect[0][0], rect[1][0], rect[0][1], rect[2][1]], alpha=0.6)
 
     n = len(poly.pts)
@@ -391,7 +391,7 @@ app.layout = dbc.Container([
                         dcc.Loading(
                             id="loading-polygon",
                             type="circle",
-                            children=html.Img(id='polygon-image', style={'width': '100%', 'height': 'auto'})
+                            children=html.Img(id='polygon-image', style={'maxWidth': '600px', 'width': '100%', 'height': 'auto', 'margin': 'auto', 'display': 'block'})
                         )
                     ]),
                     html.Hr(),
