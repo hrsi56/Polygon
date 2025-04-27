@@ -8,5 +8,5 @@ https://polygon-ilj1.onrender.com
 
 or dash via railway:
 
-web-production-26fe5.up.railway.app
+https://web-production-26fe5.up.railway.app
 
